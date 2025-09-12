@@ -1,6 +1,7 @@
 *** Settings ***
 Library    SeleniumLibrary
 Resource   locators.robot
+Resource   dummydata.json
 
 *** Keywords ***
 Go To Purchase Order Screen

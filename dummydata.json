@@ -1,0 +1,13 @@
+{
+  "purchase_sales_order_type": "Purchase",
+  "document_name": "PO-2025-001",
+  "company_location": "Karachi",
+  "business_unit": "Unit-7",
+  "doc_number_prefix": "DOC-PO",
+  "document_name_for_print": "Purchase Order",
+  "lock_after_hours": "24",
+  "lc_control_account": "LC-ACC-001",
+  "import_allowed_banks": "HBL, UBL",
+  "customer_type": "Corporate",
+  "sku_category": "Electronics"
+}
