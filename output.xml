@@ -1,100 +1,131 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 7.3.2 (Python 3.10.12 on linux)" generated="2025-09-12T18:00:58.269111" rpa="false" schemaversion="5">
+<robot generator="Robot 7.3.2 (Python 3.10.12 on linux)" generated="2025-09-12T19:18:34.016267" rpa="false" schemaversion="5">
 <suite id="s1" name="Workflow" source="/home/pc/Desktop/ERP-RPA/workflow.robot">
-<test id="s1-t1" name="RPA Login Bot" line="49">
+<test id="s1-t1" name="RPA Login Bot" line="38">
 <kw name="Login To Website">
 <kw name="Open Browser" owner="SeleniumLibrary">
-<msg time="2025-09-12T18:00:58.412520" level="INFO">Opening browser 'Chrome' to base url 'http://slcloudpos.3em.tech'.</msg>
+<msg time="2025-09-12T19:18:34.161268" level="INFO">Opening browser 'Chrome' to base url 'http://slcloudpos.3em.tech'.</msg>
 <arg>${URL}</arg>
 <arg>${BROWSER}</arg>
 <doc>Opens a new browser instance to the optional ``url``.</doc>
-<status status="PASS" start="2025-09-12T18:00:58.412247" elapsed="6.822538"/>
+<status status="PASS" start="2025-09-12T19:18:34.161012" elapsed="3.424787"/>
 </kw>
 <kw name="Sleep" owner="BuiltIn">
-<msg time="2025-09-12T18:01:15.235716" level="INFO">Slept 10 seconds.</msg>
-<arg>10s</arg>
+<msg time="2025-09-12T19:18:43.587075" level="INFO">Slept 6 seconds.</msg>
+<arg>6s</arg>
 <doc>Pauses the test executed for the given time.</doc>
-<status status="PASS" start="2025-09-12T18:01:05.235039" elapsed="10.001108"/>
+<status status="PASS" start="2025-09-12T19:18:37.586130" elapsed="6.001404"/>
 </kw>
 <kw name="Maximize Browser Window" owner="SeleniumLibrary">
 <doc>Maximizes current browser window.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.236945" elapsed="0.175635"/>
+<status status="PASS" start="2025-09-12T19:18:43.588245" elapsed="0.008178"/>
 </kw>
 <kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
 <arg>${USERNAME_ID}</arg>
 <arg>10s</arg>
 <doc>Waits until the element ``locator`` is visible.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.412862" elapsed="0.020518"/>
+<status status="PASS" start="2025-09-12T19:18:43.597037" elapsed="4.150527"/>
 </kw>
 <kw name="Input Text" owner="SeleniumLibrary">
-<msg time="2025-09-12T18:01:15.434063" level="INFO">Typing text 'it@topsungroup.pk' into text field 'id=login_email'.</msg>
+<msg time="2025-09-12T19:18:47.748238" level="INFO">Typing text 'it@topsungroup.pk' into text field 'id=login_email'.</msg>
 <arg>${USERNAME_ID}</arg>
 <arg>${USERNAME}</arg>
 <doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.433668" elapsed="0.196068"/>
+<status status="PASS" start="2025-09-12T19:18:47.747835" elapsed="0.212610"/>
 </kw>
 <kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
 <arg>${PASSWORD_ID}</arg>
 <arg>10s</arg>
 <doc>Waits until the element ``locator`` is visible.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.630081" elapsed="0.018043"/>
+<status status="PASS" start="2025-09-12T19:18:47.960744" elapsed="0.018711"/>
 </kw>
 <kw name="Input Text" owner="SeleniumLibrary">
-<msg time="2025-09-12T18:01:15.648807" level="INFO">Typing text 'Ba@leno99' into text field 'id=login_password'.</msg>
+<msg time="2025-09-12T19:18:47.980075" level="INFO">Typing text 'Ba@leno99' into text field 'id=login_password'.</msg>
 <arg>${PASSWORD_ID}</arg>
 <arg>${PASSWORD}</arg>
 <doc>Types the given ``text`` into the text field identified by ``locator``.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.648417" elapsed="0.130717"/>
+<status status="PASS" start="2025-09-12T19:18:47.979719" elapsed="0.115208"/>
 </kw>
 <kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
 <arg>${LOGIN_BTN}</arg>
 <arg>10s</arg>
 <doc>Waits until the element ``locator`` is visible.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.779446" elapsed="0.027202"/>
+<status status="PASS" start="2025-09-12T19:18:48.095210" elapsed="0.017951"/>
 </kw>
 <kw name="Click Button" owner="SeleniumLibrary">
-<msg time="2025-09-12T18:01:15.807294" level="INFO">Clicking button 'xpath=//button[@type='submit'][.//span[normalize-space(.)='Log in']]'.</msg>
+<msg time="2025-09-12T19:18:48.113805" level="INFO">Clicking button 'xpath=//button[@type='submit'][.//span[normalize-space(.)='Log in']]'.</msg>
 <arg>${LOGIN_BTN}</arg>
 <doc>Clicks the button identified by ``locator``.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.806897" elapsed="0.091089"/>
+<status status="PASS" start="2025-09-12T19:18:48.113441" elapsed="0.099591"/>
 </kw>
 <kw name="Sleep" owner="BuiltIn">
-<msg time="2025-09-12T18:01:18.898678" level="INFO">Slept 3 seconds.</msg>
+<msg time="2025-09-12T19:18:51.213843" level="INFO">Slept 3 seconds.</msg>
 <arg>3s</arg>
 <doc>Pauses the test executed for the given time.</doc>
-<status status="PASS" start="2025-09-12T18:01:15.898252" elapsed="3.000778"/>
+<status status="PASS" start="2025-09-12T19:18:48.213329" elapsed="3.000878"/>
 </kw>
 <kw name="Page Should Contain" owner="SeleniumLibrary">
-<msg time="2025-09-12T18:01:18.956222" level="INFO">Current page contains text 'Dashboard'.</msg>
+<msg time="2025-09-12T19:18:51.264265" level="INFO">Current page contains text 'Dashboard'.</msg>
 <arg>${SUCCESS_TEXT}</arg>
 <doc>Verifies that current page contains ``text``.</doc>
-<status status="PASS" start="2025-09-12T18:01:18.899675" elapsed="0.056759"/>
-</kw>
-<kw name="Close Browser" owner="SeleniumLibrary">
-<doc>Closes the current browser.</doc>
-<status status="PASS" start="2025-09-12T18:01:18.956814" elapsed="0.062533"/>
+<status status="PASS" start="2025-09-12T19:18:51.214728" elapsed="0.049797"/>
 </kw>
 <doc>Open website and log in</doc>
-<status status="PASS" start="2025-09-12T18:00:58.411509" elapsed="20.608004"/>
+<status status="PASS" start="2025-09-12T19:18:34.160328" elapsed="17.104480"/>
 </kw>
-<status status="PASS" start="2025-09-12T18:00:58.410677" elapsed="20.609071"/>
+<kw name="Go To Purchase Order Screen" owner="po_flow">
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${MENU_PURCHASE}</arg>
+<arg>5s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="PASS" start="2025-09-12T19:18:51.266297" elapsed="0.050468"/>
+</kw>
+<kw name="Mouse Over" owner="SeleniumLibrary">
+<msg time="2025-09-12T19:18:51.317902" level="INFO">Simulating Mouse Over on element 'xpath=//li[@class='ant-menu-submenu ant-menu-submenu-vertical ant-menu-submenu-open ant-menu-submenu-active']//span[@aria-label='dollar']//*[name()='svg']'.</msg>
+<arg>${MENU_PURCHASE}</arg>
+<doc>Simulates hovering the mouse over the element ``locator``.</doc>
+<status status="PASS" start="2025-09-12T19:18:51.317270" elapsed="0.274628"/>
+</kw>
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<msg time="2025-09-12T19:18:56.830551" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="selenium-screenshot-5.png"&gt;&lt;img src="selenium-screenshot-5.png" width="800px"&gt;&lt;/a&gt;</msg>
+<msg time="2025-09-12T19:18:56.830758" level="FAIL">Element 'xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]' not visible after 5 seconds.</msg>
+<arg>${MENU_BILL}</arg>
+<arg>5s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="FAIL" start="2025-09-12T19:18:51.592692" elapsed="5.238636">Element 'xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]' not visible after 5 seconds.</status>
+</kw>
+<kw name="Mouse Over" owner="SeleniumLibrary">
+<arg>${MENU_BILL}</arg>
+<doc>Simulates hovering the mouse over the element ``locator``.</doc>
+<status status="NOT RUN" start="2025-09-12T19:18:56.831593" elapsed="0.000050"/>
+</kw>
+<kw name="Wait Until Element Is Visible" owner="SeleniumLibrary">
+<arg>${LINK_PURCHASE_BILL}</arg>
+<arg>5s</arg>
+<doc>Waits until the element ``locator`` is visible.</doc>
+<status status="NOT RUN" start="2025-09-12T19:18:56.831783" elapsed="0.000038"/>
+</kw>
+<kw name="Click Element" owner="SeleniumLibrary">
+<arg>${LINK_PURCHASE_BILL}</arg>
+<doc>Click the element identified by ``locator``.</doc>
+<status status="NOT RUN" start="2025-09-12T19:18:56.831949" elapsed="0.000036"/>
+</kw>
+<status status="FAIL" start="2025-09-12T19:18:51.265478" elapsed="5.566644">Element 'xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]' not visible after 5 seconds.</status>
+</kw>
+<status status="FAIL" start="2025-09-12T19:18:34.159581" elapsed="22.672802">Element 'xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]' not visible after 5 seconds.</status>
 </test>
-<status status="PASS" start="2025-09-12T18:00:58.270088" elapsed="20.750156"/>
+<status status="FAIL" start="2025-09-12T19:18:34.017115" elapsed="22.815756"/>
 </suite>
 <statistics>
 <total>
-<stat pass="1" fail="0" skip="0">All Tests</stat>
+<stat pass="0" fail="1" skip="0">All Tests</stat>
 </total>
 <tag>
 </tag>
 <suite>
-<stat name="Workflow" id="s1" pass="1" fail="0" skip="0">Workflow</stat>
+<stat name="Workflow" id="s1" pass="0" fail="1" skip="0">Workflow</stat>
 </suite>
 </statistics>
 <errors>
-<msg time="2025-09-12T18:00:58.408276" level="WARN">Imported resource file '/home/pc/Desktop/ERP-RPA/po_flow.robot' is empty.</msg>
-<msg time="2025-09-12T18:00:58.409282" level="WARN">Imported resource file '/home/pc/Desktop/ERP-RPA/voucher_flow.robot' is empty.</msg>
-<msg time="2025-09-12T18:00:58.409716" level="WARN">Imported resource file '/home/pc/Desktop/ERP-RPA/grn_flow.robot' is empty.</msg>
-<msg time="2025-09-12T18:00:58.410037" level="WARN">Imported resource file '/home/pc/Desktop/ERP-RPA/bill_flow.robot' is empty.</msg>
 </errors>
 </robot>
