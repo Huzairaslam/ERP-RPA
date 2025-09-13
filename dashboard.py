@@ -7,27 +7,27 @@ COUNT_API = "http://0.0.0.0:8000/processes"
 st.set_page_config(page_title="RPA Dashboard", layout="wide")
 st.title("📊 RPA Process Dashboard")
 
-def run_rpa(process_name):
+def run_rpa(document_type):
     """
     Trigger your Robot Framework RPA script based on the process name.
     Adjust the robot file names as per your setup.
     """
-    if process_name.lower() == "po":
+    if document_type.lower() == "po":
         robot_file = "po_flow.robot"
-    elif process_name.lower() == "purchasebill":
+    elif document_type.lower() == "purchasebill":
         robot_file = "bill_flow.robot"
-    elif process_name.lower() == "invoice":
+    elif document_type.lower() == "invoice":
         robot_file = "invoice_flow.robot"
     else:
-        st.warning(f"No RPA configured for {process_name}")
+        st.warning(f"No RPA configured for {document_type}")
         return
     
-    st.info(f"🚀 Starting RPA for {process_name}...")
+    st.info(f"🚀 Starting RPA for {document_type}...")
     try:
         subprocess.run(["robot", robot_file], check=True)
-        st.success(f"✅ RPA for {process_name} completed successfully!")
+        st.success(f"✅ RPA for {document_type} completed successfully!")
     except subprocess.CalledProcessError as e:
-        st.error(f"❌ Failed to run RPA for {process_name}: {e}")
+        st.error(f"❌ Failed to run RPA for {document_type}: {e}")
 
 # Fetch process counts
 try:
@@ -44,16 +44,16 @@ if processes:
     st.table(processes)
 
     for process in processes:
-        process_name = process.get("process_name", "Unknown")
+        document_type = process.get("document_type", "Unknown")
         count = int(process.get("count", 0))
 
         if count > 0:
-            with st.expander(f"🔍 {process_name} details"):
+            with st.expander(f"🔍 {document_type} details"):
                 detail_resp = requests.get(f"http://0.0.0.0:8000/processes/{process['id']}")
                 detail_resp.raise_for_status()
                 data = detail_resp.json()
                 st.json(data)
-            st.info(f"⚡ Auto-running RPA for {process_name} (count increases)")
-            run_rpa(process_name)
+            st.info(f"⚡ Auto-running RPA for {document_type} (count increases)")
+            run_rpa(document_type)
 else:
     st.warning("No process data available.")
