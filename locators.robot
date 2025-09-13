@@ -35,10 +35,10 @@ ${SALES_ACC}             id=:r6v:
 #Purchase Bill Screen Locators
 ${NEWBTN}       xpath=//button[.//span[normalize-space(text())='New/Clear']]
 ${INVOICENUMBER}        xpath=//input[@placeholder='Enter Invoice Number']
-${DOCDATE}      xpath=//input[@id=':rvl:']
+${DOCDATE}      xpath=//input[@role="combobox" and contains(@class,"k-input-inner")]
 ${VENDORNUMBER}     xpath=//input[@id='voucher-master_customerOrderNumber']
 ${DELIVERYADDRESS}      xpath=//input[@id='voucher-master_deliveryAddress']
-${VENDORNAME}        xpath=role=combobox[name="Type here to search Vendor"]
-${PURCHASEORDER}        xpath=role=combobox[name="Type Vendor Name/ PO# to"]
+${VENDORNAME}    xpath=//span[contains(@class,"k-combobox")]//input[@placeholder="Type here to search Vendor"]
+${PURCHASEORDER}    xpath=//span[contains(@class,"k-combobox")]//input[@placeholder="Type Vendor Name/ PO# to search open purchase Order"]
 ${ADDDETAIL}        xpath=//div[@type='primary']
 ${SUBMITBTN}        xpath=//span[normalize-space()='Add']

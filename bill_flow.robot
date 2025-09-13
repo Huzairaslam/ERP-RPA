@@ -3,10 +3,23 @@ Library    SeleniumLibrary
 Resource   locators.robot
 # Resource   dummydata.json
 Resource   data.robot
-*** Keywords ***
+*** Tasks ***
+Login To Website
+    [Documentation]    Open website and log in
+    Open Browser    ${URL}    ${BROWSER}
+    Sleep   6s
+    Maximize Browser Window
+    Wait Until Element Is Visible    ${USERNAME_ID}    10s
+    Input Text    ${USERNAME_ID}    ${USERNAME}
+    Wait Until Element Is Visible    ${PASSWORD_ID}    10s
+    Input Text    ${PASSWORD_ID}    ${PASSWORD}
+    Wait Until Element Is Visible    ${LOGIN_BTN}    10s
+    Click Button    ${LOGIN_BTN}
+    Sleep    3s
+    Page Should Contain    ${SUCCESS_TEXT}
+
 Create Sales Invoice
     [Documentation]    Fill and submit Sales Invoice form after login
-   
     Go To    ${BILL_URL}
     Sleep   10s
     Wait Until Element Is Visible    ${NEWBTN}    10s
@@ -37,13 +50,11 @@ Create Sales Invoice
     Wait Until Element Is Visible   ${VENDORNAME}    5s
     Click Element 	${VENDORNAME}
     Input Text    ${VENDORNAME}    Ali Traders
-    # Keyboard Key    Enter
 
     # Select purchase order
     Wait Until Element Is Visible   ${PURCHASEORDER}    5s
     Click Element 	${PURCHASEORDER}
     Input Text    ${PURCHASEORDER}    PO-2025-009
-    # Keyboard Key    Enter
 
     # Click add detail (e.g., line item)
     # Wait Until Element Is Visible   ${ADDDETAIL}    5s
