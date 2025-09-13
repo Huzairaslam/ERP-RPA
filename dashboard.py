@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # API endpoints (you can reuse the same as in data.robot)
-COUNT_API = "https://example.com/api/count"
+COUNT_API = "https://example.com/api/count" 
 
 st.set_page_config(page_title="RPA Dashboard", layout="wide")
 st.title("📊 RPA Process Dashboard")

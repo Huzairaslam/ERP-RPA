@@ -1,0 +1,12 @@
+# Robot Framework output files
+output.xml
+log.html
+report.html
+
+# Robot Framework screenshots (all png/jpg in output dirs)
+*.png
+*.jpg
+
+# If screenshots are in a specific folder (uncomment and adjust)
+# screenshots/
+# output/

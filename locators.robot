@@ -9,7 +9,6 @@ ${MENU_PURCHASE}     xpath=//li[@class='ant-menu-submenu ant-menu-submenu-vertic
 ${MENU_BILL}         xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]
 ${LINK_PURCHASE_BILL}    xpath=//a[normalize-space()='Purchase Bill - Topsun Chemicals - Topsun-1']
 
-
 # --- Invoice / PO Form Fields ---
 ${INVOICE_TYPE}          id=jv-manager_invoiceType
 ${INVOICE_NAME}          id=jv-manager_invoiceName
@@ -30,3 +29,16 @@ ${STOCKSTORE_ACC}        id=:r6s:
 ${CASHBOOK_ACC}          id=:r6t:
 ${SGS_ACC}               id=:r6u:
 ${SALES_ACC}             id=:r6v:
+
+
+
+#Purchase Bill Screen Locators
+${NEWBTN}       xpath=//button[.//span[normalize-space(text())='New/Clear']]
+${INVOICENUMBER}        xpath=//input[@placeholder='Enter Invoice Number']
+${DOCDATE}      xpath=//input[@id=':rvl:']
+${VENDORNUMBER}     xpath=//input[@id='voucher-master_customerOrderNumber']
+${DELIVERYADDRESS}      xpath=//input[@id='voucher-master_deliveryAddress']
+${VENDORNAME}        xpath=role=combobox[name="Type here to search Vendor"]
+${PURCHASEORDER}        xpath=role=combobox[name="Type Vendor Name/ PO# to"]
+${ADDDETAIL}        xpath=//div[@type='primary']
+${SUBMITBTN}        xpath=//span[normalize-space()='Add']

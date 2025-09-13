@@ -2,11 +2,11 @@
 Library    SeleniumLibrary
 Resource   locators.robot
 Resource   data.robot
-Resource   po_flow.robot
+# Resource   po_flow.robot
 # Resource   invoice_flow.robot
 # Resource   voucher_flow.robot
 # Resource   grn_flow.robot
-# Resource   bill_flow.robot
+Resource   bill_flow.robot
 
 *** Keywords ***
 Login To Website
@@ -20,7 +20,6 @@ Login To Website
     Input Text    ${PASSWORD_ID}    ${PASSWORD}
     Wait Until Element Is Visible    ${LOGIN_BTN}    10s
     Click Button    ${LOGIN_BTN}
-    # Run Keyword If    '${TEST STATUS}'=='FAIL'    Execute JavaScript    document.evaluate("//button[.//span[text()='Log in']]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.click()
     Sleep    3s
     Page Should Contain    ${SUCCESS_TEXT}
 
@@ -37,4 +36,4 @@ Login To Website
 *** Test Cases ***
 RPA Login Bot
     Login To Website
-    Go To Purchase Order Screen
+    Create Sales Invoice
