@@ -45,7 +45,6 @@ Create Sales Invoice
     Click Element 	${DELIVERYADDRESS}
     Input Text    ${DELIVERYADDRESS}    Warehouse Karachi
 
-
     # Select vendor name (combobox)
     Wait Until Element Is Visible   ${VENDORNAME}    5s
     Click Element 	${VENDORNAME}
@@ -54,7 +53,7 @@ Create Sales Invoice
     # Select purchase order
     Wait Until Element Is Visible   ${PURCHASEORDER}    5s
     Click Element 	${PURCHASEORDER}
-    Input Text    ${PURCHASEORDER}    PO-2025-009
+    Input Text    ${PURCHASEORDER}    zohaib
 
     # Click add detail (e.g., line item)
     # Wait Until Element Is Visible   ${ADDDETAIL}    5s

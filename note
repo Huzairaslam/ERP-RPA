@@ -1,0 +1,7 @@
+{ "document_type": "Purchase Bill", "company_name": "THE FLEX SHOP", "company_address": [ "INDUSTRIAL ESTAE", "MULTAN" ], "bill_date": "02-09-2025", "po_number": "40" }, "customer_info": { "invoice_number": "12", "customer_name": "THE FLEX SHOP (MALIK SAFDAR DGK)(100010)", "customer_address": "Industrial est area Multan" }, 
+"line_items": [ 
+{ "product": "BAG SHADMAN TS", "policy": "/", "batch_number": null, "quantity": "1000 Piece", "rate": 80, "gross_amount": 80000, "discount_amount": 0, "net_amount": 80000, "cartons_bags_drums": null, "packs": null },
+ { "product": "CABLE TIE", "policy": "/", "batch_number": null, "quantity": "1000 Piece", "rate": 2.5, "gross_amount": 2500, "discount_amount": 0, "net_amount": 2500, "cartons_bags_drums": null, "packs": null }, 
+{ "product": "INNER 24X43 (50KG)", "policy": "/", "batch_number": null, "quantity": "50 Kg", "rate": 430, "gross_amount": 21500, "discount_amount": 0, "net_amount": 21500, "cartons_bags_drums": null, "packs": null }
+ ], 
+"summary": { "total_gross_amount": 104000, "total_discount_amount": 0, "total_net_amount": 104000 }, "footer": { "created_by": "Malik Safdar" }, "other_info": { "extraction_timestamp": "9/13/25, 6:02 PM", "print_date": null, "store": null, "su": null, "tm_contact": null }, "arabic_text_present": false }
