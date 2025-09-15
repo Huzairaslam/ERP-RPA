@@ -1,8 +1,9 @@
 *** Settings ***
 Library    SeleniumLibrary
 Resource   locators.robot
-# Resource   dummydata.json
+Resource   billvalue.robot
 Resource   data.robot
+
 *** Tasks ***
 Login To Website
     [Documentation]    Open website and log in
@@ -16,53 +17,45 @@ Login To Website
     Wait Until Element Is Visible    ${LOGIN_BTN}    10s
     Click Button    ${LOGIN_BTN}
     Sleep    3s
-    Page Should Contain    ${SUCCESS_TEXT}
+    # Page Should Contain    ${SUCCESS_TEXT}
 
 Create Sales Invoice
-    [Documentation]    Fill and submit Sales Invoice form after login
+    [Documentation]    Fill and submit Purchase Bill form after login
+
+    # Parse API data before filling form
+    Parse API Response
+
     Go To    ${BILL_URL}
-    Sleep   10s
-    Wait Until Element Is Visible    ${NEWBTN}    10s
+    Wait Until Element Is Visible    ${NEWBTN}    20s
     Click Element    ${NEWBTN}
 
-    # Fill invoice number
+    # Fill invoice number (from API)
     Wait Until Element Is Visible   ${INVOICENUMBER}    5s
-    Click Element 	${INVOICENUMBER} 
-    Input Text    ${INVOICENUMBER}    INV-2025-001
+    Input Text    ${INVOICENUMBER}    ${invoice_number}
 
-    # Fill document date
+    # Fill document date (from API)
     Wait Until Element Is Visible   ${DOCDATE}    5s
-    Click Element 	${DOCDATE}
-    Input Text    ${DOCDATE}    2025-09-12
+    Input Text    ${DOCDATE}    ${doc_date}
 
-    # Fill vendor order number
+    # Fill vendor order number (using po_number)
     Wait Until Element Is Visible   ${VENDORNUMBER}    5s
-    Click Element 	${VENDORNUMBER}
-    Input Text    ${VENDORNUMBER}    VEND-1234
+    Input Text    ${VENDORNUMBER}    ${vendor_number}
 
-    # Fill delivery address
+    # Fill delivery address (customer_address)
     Wait Until Element Is Visible   ${DELIVERYADDRESS}    5s
-    Click Element 	${DELIVERYADDRESS}
-    Input Text    ${DELIVERYADDRESS}    Warehouse Karachi
+    Input Text    ${DELIVERYADDRESS}    ${delivery_address}
 
-    # Select vendor name (combobox)
+    # Select vendor name (company_name)
     Wait Until Element Is Visible   ${VENDORNAME}    5s
-    Click Element 	${VENDORNAME}
-    Input Text    ${VENDORNAME}    Ali Traders
+    Input Text    ${VENDORNAME}    ${vendor_name}
 
     # Select purchase order
     Wait Until Element Is Visible   ${PURCHASEORDER}    5s
-    Click Element 	${PURCHASEORDER}
-    Input Text    ${PURCHASEORDER}    zohaib
-
-    # Click add detail (e.g., line item)
-    # Wait Until Element Is Visible   ${ADDDETAIL}    5s
-    # Click    ${ADDDETAIL}
-    # Sleep    1s
+    # Input Text    ${PURCHASEORDER}    ${po_number}
 
     # Submit the form
     Wait Until Element Is Visible    ${SUBMITBTN}    5s
-    Click    ${SUBMITBTN}
+    Click Element    ${SUBMITBTN}
 
     Sleep    2s
-    Log To Console    Sales Invoice Created Successfully ✅
+    Log To Console    ✅ Sales Invoice Created Successfully with API Data

@@ -16,8 +16,8 @@ def run_rpa(document_type):
         robot_file = "po_flow.robot"
     elif document_type.lower() == "purchasebill":
         robot_file = "bill_flow.robot"
-    elif document_type.lower() == "invoice":
-        robot_file = "invoice_flow.robot"
+    elif document_type.lower() == "GRN":
+        robot_file = "grn_flow.robot"
     else:
         st.warning(f"No RPA configured for {document_type}")
         return
@@ -49,7 +49,7 @@ if processes:
 
         if count > 0:
             with st.expander(f"🔍 {document_type} details"):
-                detail_resp = requests.get(f"http://0.0.0.0:8000/processes/{process['id']}")
+                detail_resp = requests.get(f"http://0.0.0.0:8000/dummy_invoice")
                 detail_resp.raise_for_status()
                 data = detail_resp.json()
                 st.json(data)
