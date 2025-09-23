@@ -11,7 +11,9 @@ ${USERNAME}   it@topsungroup.pk
 ${PASSWORD}   Ba@leno99
 
     # [Documentation] Form relevent url
-${BILL_URL}        http://slcloudpos.3em.tech/sales-invoice 
+${BILL_URL}        http://slcloudpos.3em.tech/sales-invoice
+${PURCHASE_ORDER_URL}        http://slcloudpos.3em.tech/purchase-sales-order
+
 
 
 

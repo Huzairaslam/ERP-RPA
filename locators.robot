@@ -1,44 +1,52 @@
 *** Variables ***
-${USERNAME_ID}    id=login_email
-${PASSWORD_ID}    id=login_password
+${USERNAME_ID}    xpath=//input[@placeholder='Email']
+${PASSWORD_ID}    xpath=//input[@placeholder='Password']
 ${LOGIN_BTN}      xpath=//button[@type='submit'][.//span[normalize-space(.)='Log in']]
 ${SUCCESS_TEXT}   Dashboard
 
-# Navigation to PO (from Playwright recording)
-${MENU_PURCHASE}     xpath=//li[@class='ant-menu-submenu ant-menu-submenu-vertical ant-menu-submenu-open ant-menu-submenu-active']//span[@aria-label='dollar']//*[name()='svg']
-${MENU_BILL}         xpath=//div[@class='ant-menu-submenu ant-menu-submenu-popup ant-menu ant-menu-dark css-os2fvf ant-menu-submenu-placement-rightTop']//li[2]//div[1]
-${LINK_PURCHASE_BILL}    xpath=//a[normalize-space()='Purchase Bill - Topsun Chemicals - Topsun-1']
-
-# --- Invoice / PO Form Fields ---
-${INVOICE_TYPE}          id=jv-manager_invoiceType
-${INVOICE_NAME}          id=jv-manager_invoiceName
-${INVOICE_NAME_PRINT}    id=jv-manager_invoiceNameForPrint
-${DOC_NUMBER}            id=jv-manager_docNumberPrefix
-${COMPANY_LOCATION}      id=:r6l:
-${BUSINESS_UNIT}         id=:r6m:
-${HOURS}                 id=jv-manager_lockAfterHours
-${TERMS}                 id=jv-manager_termAndCondition
-
-# --- Accounts Dropdowns ---
-${TAX_ACC}               id=:r6n:
-${DISCOUNT_ACC}          id=:r6o:
-${FED_ACC}               id=:r6p:
-${FREIGHT_ACC}           id=:r6q:
-${SED_ACC}               id=:r6r:
-${STOCKSTORE_ACC}        id=:r6s:
-${CASHBOOK_ACC}          id=:r6t:
-${SGS_ACC}               id=:r6u:
-${SALES_ACC}             id=:r6v:
 
 
+# Purchase Order Screen Locators
+${PurchaseBtn}    xpath=//span[normalize-space()='Purchase']
+${PurchaseOrderBtn}    xpath=//span[normalize-space()='Purchase Order']
+${PurchaseBtn2}    xpath=//a[normalize-space()='Purchase Order - Topsun Chemicals - Topsun-1']
+${PurchaseBillBtn}    xpath=//span[normalize-space()='Bill']
+${PurchaseBillbtn2}    xpath=//a[normalize-space()='Purchase Bill - Topsun Chemicals - Topsun-1']
 
-#Purchase Bill Screen Locators
-${NEWBTN}       xpath=//button[.//span[normalize-space(text())='New/Clear']]
-${INVOICENUMBER}        xpath=//input[@placeholder='Enter Invoice Number']
-${DOCDATE}      xpath=//input[@role="combobox" and contains(@class,"k-input-inner")]
-${VENDORNUMBER}     xpath=//input[@id='voucher-master_customerOrderNumber']
-${DELIVERYADDRESS}      xpath=//input[@id='voucher-master_deliveryAddress']
-${VENDORNAME}    xpath=//span[contains(@class,"k-combobox")]//input[@placeholder="Type here to search Vendor"]
-${PURCHASEORDER}    xpath=//span[contains(@class,"k-combobox")]//input[@placeholder="Type Vendor Name/ PO# to search open purchase Order"]
-${ADDDETAIL}        xpath=//div[@type='primary']
-${SUBMITBTN}        xpath=//span[normalize-space()='Add']
+${NEWBTN}    xpath://*[normalize-space(.)="New/Clear"]
+${VendorNamePO}    xpath://input[@placeholder="Search by Customer name,Code,Address,Area"]
+${DocDate}    xpath=(//input[@class='k-input-inner'])[2]
+${MobileNUmber}    xpath=//input[@id='jv-manager_mobileNumber']   
+${SpecialInst}    xpath=//textarea[@id='jv-manager_specialInstructions']
+${PoDeliveryAddress}    xpath=//input[@id='jv-manager_deliveryAddress']
+${FullName}    xpath=//input[@id='jv-manager_contactPersonFullName']
+# ${ExpDate}    xpath=(//input[@class='k-input-inner'])[3]
+${ExpDate}    xpath=//span[contains(@class,'k-datepicker')]//button[contains(@class,'k-icon-button')]
+${AddDetailPO}    xpath://*[normalize-space(.)="Add Product Detail"]
+${SKUNAME}    xpath://input[@placeholder="Select SKU"]
+${SKUVALUE}    xpath=//span[normalize-space()='BAG SOIL BOOSTER 50KG (SP)']
+${FirstOption}    xpath=//span[normalize-space()='THE FLEX SHOP (MALIK FAHEEM DGK)(100674)']
+${SKUPACK}    xpath://input[@placeholder="Select SKU Packing"]
+# ${SKUPACKVALUE}    xpath=
+${SKUQUANTITY}    xpath=//input[@placeholder="Quantity"]
+${SKURATE}    xpath=//input[@placeholder="Agreed Rate"]
+${SKUTOTALRATE}    xpath=//input[@placeholder="totalAmount"]
+${ADDBTN}    xpath://*[normalize-space(.)="Add"]
+${Expirydate}    xpath=//td[.//span[text()='11'] and contains(@class,'k-calendar-date')]
+
+
+${PurchaseOrderNumber}    xpath://input[@placeholder="Type Vendor Name/ PO# to search open purchase Order"]
+${FirstOptionPO}    xpath=//span[contains(text(), concat("PO #:42 / Customer:THE FLEX SHOP (MALIK FAHEEM DGK", ")"))]
+${VendorNumber}    xpath=//input[@id='voucher-master_customerOrderNumber']
+${DeliveryAddressPO}    xpath=//input[@id='voucher-master_deliveryAddress']
+
+
+${SKUVALUEPB}    xpath=//span[normalize-space()='CYLINDER INSAF SEED BAGS 5KG']
+${AddDetailPB}   xpath=//div[normalize-space(text())="Add Detail"]
+${SKUPBRATE}    xpath=//input[@placeholder="Rate"]
+${SKUPBAMT}    xpath=//input[@placeholder="Amount"]
+${SKU-PB-DIS-PER}    xpath=//input[@placeholder="Discount Percentage"]
+${SKU-PB-DIS-AMT}    xpath=//input[@placeholder="Discount Amount"]
+${SKU-PB-VALUE-TAX}    xpath=//input[@placeholder="Value Exclusive Tax"]
+${SKU-PB-TAX-PER}    xpah=//input[@placeholder="Tax Percentage"]
+${SKU-PB-TOTAL-AMT}    xpath=//input[@placeholder="Total Amount"]

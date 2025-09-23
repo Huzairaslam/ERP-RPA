@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/pc/Desktop/erp_rpa/RPA
+set -gx VIRTUAL_ENV /home/pc/Desktop/ERP-RPA/RPA
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
