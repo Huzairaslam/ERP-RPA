@@ -1,4 +1,3 @@
-
 *** Settings ***
 Library    SeleniumLibrary
 # Library    RPA/lib/python3.10/site-packages/Browser/browser.py
@@ -6,7 +5,7 @@ Resource   locators.robot
 # Resource   purchasebillvalue.robot
 # Resource   purchaseordervalue.robot
 Resource   data.robot
-Resource   apiResponse.robot
+Resource   PB_apiResponse.robot
 
 *** Keywords ***
 Type Slowly
@@ -37,7 +36,7 @@ Login To Website
     Input Text    ${PASSWORD_ID}    ${PASSWORD}
     Wait Until Element Is Visible    ${LOGIN_BTN}    10s
     Click Button    ${LOGIN_BTN}
-    Sleep    3s
+    Sleep    5s
 
 Locating To Purchase Order Form
     Wait Until Element Is Visible    ${PurchaseBtn}    5s
@@ -52,40 +51,40 @@ Locating To Purchase Order Form
 Purchase Bill Form
     Wait Until Element Is Visible    ${NEWBTN}    5s
     Click Element    ${NEWBTN}
-    Fetch API Data
+    Sleep    5s
+    Fetch Latest Record
     # PO NUMBER
     Wait Until Element Is Visible    ${PurchaseOrderNumber}
     Click Element      ${PurchaseOrderNumber}    # focus the input
-    Type Slowly        ${PurchaseOrderNumber}    ${COMPANY}    0.2s
+    Type Slowly        ${PurchaseOrderNumber}    ${VENDOR}    0.2s
     Wait Until Element Is Visible    ${FirstOptionPO}    5s
     Click Element    ${FirstOptionPO}
     # VENDOR NUMBER
     Wait Until Element Is Visible    ${VendorNumber}    3s
     Click Element    ${VendorNumber}
-    Input Text    ${VendorNumber}    ${INVOICE}
+    Input Text    ${VendorNumber}    ${VendorOrderNumber}
     # DELIVERY ADDRESS
     Wait Until Element Is Visible    ${DeliveryAddressPO}    3s
     Click Element    ${DeliveryAddressPO}    
-    Input Text    ${DeliveryAddressPO}    Karachi,Gulshan-3-iqbal,Block-2,Imtiaz-Super-Market
+    Input Text    ${DeliveryAddressPO}    ${DeliveryAddress}
     # ADD SKU BUTTON
     Wait Until Element Is Visible    ${AddDetailPB}
     Click Element    ${AddDetailPB}
-    PRODUCTS INFORMATION
     Sleep    1s
-    # SKU NAME 
-    Wait Until Element Is Visible    ${SKUNAME}
-    Click Element    ${SKUNAME}
-    Input Text    ${SKUNAME}    ${SKU}
-    Wait Until Element Is Visible    ${SKUVALUEPB}    3s
-    Click Element    ${SKUVALUEPB}
-    # SKU QUANTITY 
-    Wait Until Element Is Visible    ${SKUQUANTITY}
-    Click Element    ${SKUQUANTITY}
-    Input Text    ${SKUQUANTITY}    ${QUANTITY}
-    # SKU RATE 
-    Wait Until Element Is Visible    ${SKUPBRATE}
-    Click Element    ${SKUPBRATE}
-    Input Text    ${SKUPBRATE}    ${RATE}
+    # # SKU NAME 
+    # Wait Until Element Is Visible    ${SKUNAME}
+    # Click Element    ${SKUNAME}
+    # Type Slowly    ${SKUNAME}    ${SKU}    0.2s
+    # Wait Until Element Is Visible    ${SKUVALUEPB}    5s
+    # Click Element    ${SKUVALUEPB}
+    # # SKU QUANTITYs
+    # Wait Until Element Is Visible    ${SKUQUANTITY}
+    # Click Element    ${SKUQUANTITY}
+    # Input Text    ${SKUQUANTITY}    ${QUANTITY}
+    # # SKU RATE 
+    # Wait Until Element Is Visible    ${SKUPBRATE}
+    # Click Element    ${SKUPBRATE}
+    # Input Text    ${SKUPBRATE}    ${RATE}
     # SKU TOTAL RATE 
     # Scroll Element Into View    ${SKUPBAMT}
     # Wait Until Element Is Visible    ${SKUPBAMT}

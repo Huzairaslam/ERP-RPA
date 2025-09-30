@@ -2,22 +2,31 @@ import streamlit as st
 import requests
 import subprocess
 import time
+import json
 
 # ========================
 # 🔹 API Endpoints
 # ========================
-COUNT_API = "http://api.rabtai.3em.tech/api/Feed/SummarizeRecords"
-PROCESS_IDS_API = "http://0.0.0.0:8000/processes/{doc_type}/ids"
-PROCESS_DETAIL_API = "http://0.0.0.0:8000/processes/{process_id}"
+BASE_URL = "http://api.rabtai.3em.tech/api/Feed"
+COUNT_API = f"{BASE_URL}/SummarizeRecords"
+TEMPLATE_API = f"{BASE_URL}/getByTemplateId/{{templateId}}"
+POST_API = f"{BASE_URL}/Posted/{{recordId}}"
+
+# ==============================
+# 🔹 Template → RPA file mapping
+# ==============================
+TEMPLATE_RPA_MAP = {
+    "Purchase Bill Form": "purchase_bill_flow.robot",
+    "Purchase Order Form": "purchase_order_flow.robot",
+}
 
 # ========================
-# 🔹 RPA Runner
+# 🔹 Run RPA (Enhanced Output)
 # ========================
-def run_rpa(process_type: str):
+def run_rpa(rpa_file: str):
+    """Runs the Robot Framework file and returns a structured result."""
     try:
         start_time = time.time()
-        rpa_file = f"{process_type.lower().replace(' ', '_')}_flow.robot"
-
         result = subprocess.run(
             ["robot", rpa_file],
             capture_output=True,
@@ -27,12 +36,90 @@ def run_rpa(process_type: str):
         duration = round(end_time - start_time, 2)
 
         if result.returncode == 0:
-            return f"✅ Success in {duration}s"
+            return {
+                "status": "success",
+                "message": f"Execution completed in **{duration}s**.",
+                "details": f"Robot output log available in **output.xml** and **log.html**."
+            }
         else:
-            return f"❌ Failed: {result.stderr}"
+            error_details = result.stderr or result.stdout
+            return {
+                "status": "failed",
+                "message": f"Execution failed after **{duration}s**.",
+                "details": f"Error Log Snippet:\n```\n{error_details[:800]}...\n```" # Show more context
+            }
 
     except Exception as e:
-        return f"⚠️ Error: {str(e)}"
+        return {
+            "status": "error",
+            "message": f"System Error during RPA launch: {str(e)}",
+            "details": ""
+        }
+
+# [============================]
+# [🔹 Auto Process & Post🔹    ]
+# [=========================== ]
+def process_and_post(template_id: str, template_name: str):
+    placeholder = st.empty() # Placeholder for processing status
+
+    try:
+        # 1️⃣ Fetch all records under this template
+        placeholder.info(f"🔍 Fetching record details for **{template_name}**...")
+        
+        detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
+        detail_resp.raise_for_status()
+        detail_data = detail_resp.json().get("data", {})
+
+        # Handle both single record and list of records
+        if isinstance(detail_data, list):
+            if not detail_data:
+                return placeholder.warning(f"⚠️ No unposted record found for **{template_name}**")
+            detail_data = detail_data[0]
+
+        if not detail_data:
+            return placeholder.warning(f"⚠️ No unposted record found for **{template_name}**")
+
+        # Grab recordId
+        record_id = detail_data.get("id")
+        
+        if not record_id:
+            return placeholder.error(f"⚠️ No valid recordId for **{template_name}**")
+
+        placeholder.info(f"🤖 Starting RPA for Record **{record_id}**...")
+
+        # 2️⃣ Run mapped RPA file
+        rpa_file = TEMPLATE_RPA_MAP.get(template_name)
+        if rpa_file:
+            rpa_result = run_rpa(rpa_file)
+            
+            if rpa_result['status'] == 'success':
+                st.success(f"✅ RPA Success for **{template_name}** ({record_id}). {rpa_result['message']}")
+            else:
+                st.error(f"❌ RPA Failed for **{template_name}** ({record_id}). {rpa_result['message']}")
+                with st.expander("Show detailed error log"):
+                    st.markdown(rpa_result['details'])
+                return f"🛑 RPA failed for **{template_name}**. Posting skipped."
+        else:
+            return placeholder.warning(f"⚠️ No RPA file mapped for **{template_name}**")
+
+        # 3️⃣ Post the record after RPA
+        placeholder.info(f"📤 Posting Record **{record_id}**...")
+        post_resp = requests.put(POST_API.format(recordId=record_id))
+        post_resp.raise_for_status()
+        
+        # Final success message replaces the placeholder content
+        placeholder.success(f"✅ Record **{record_id}** posted successfully!")
+        return True # Return True to signal successful processing
+
+    except requests.exceptions.RequestException as e:
+        placeholder.error(f"❌ API Error in processing **{template_name}**: {e}")
+        return False
+    except json.JSONDecodeError as e:
+        placeholder.error(f"❌ JSON Error in processing **{template_name}**: {e}")
+        return False
+    except Exception as e:
+        placeholder.error(f"❌ Unhandled Error in processing **{template_name}**: {e}")
+        return False
 
 
 # ========================
@@ -46,212 +133,204 @@ try:
     response.raise_for_status()
     api_response = response.json()
 
-    # Extract data list from API response
     processes = api_response.get("data", [])
 
     if processes:
         st.subheader("📌 Process Counts")
-        st.table([{ "Process": p.get("templateName", "Unknown"), 
-                    "Count": p.get("count", 0)} for p in processes])
+        # Use st.dataframe for a nicer look than st.table
+        st.dataframe([
+            {"Process": p.get("templateName", "Unknown"), "Unposted Count": p.get("count", 0)}
+            for p in processes
+        ], hide_index=True)
+        
+        st.subheader("⚙️ Automatic Processing")
 
+        all_successful = True
+        
+        # Loop and auto-handle processing + posting
         for process in processes:
+            template_id = process.get("templateId")
             process_name = process.get("templateName", "Unknown")
             count = int(process.get("count", 0))
 
+            # Display the count for the process currently being handled
             st.metric(label=f"📄 {process_name}", value=count)
 
             if count > 0:
-                with st.expander(f"🔍 {process_name} details", expanded=False):
-                    try:
-                        ids_resp = requests.get(PROCESS_IDS_API.format(doc_type=process_name))
-                        ids_resp.raise_for_status()
-                        ids = ids_resp.json()
-                    except Exception as e:
-                        st.error(f"Could not fetch process IDs: {e}")
-                        ids = []
+                result = process_and_post(template_id, process_name)
+                if not result:
+                    all_successful = False
 
-                    for proc in ids:
-                        process_id = proc.get("id")
-                        st.write(f"📌 Process ID: {process_id}")
-
-                        try:
-                            detail_resp = requests.get(PROCESS_DETAIL_API.format(process_id=process_id))
-                            detail_resp.raise_for_status()
-                            data = detail_resp.json()
-                            st.json(data)
-                        except Exception as e:
-                            st.error(f"Could not fetch details: {e}")
-                            data = {}
-
-                        if st.button(f"⚡ Run RPA for {process_name} ({process_id})"):
-                            result_msg = run_rpa(process_name)
-                            st.success(result_msg)
+        # 🔄 Refresh summarize API after all done (Correctly implemented)
+        st.divider()
+        st.success("✅ All active processes have been checked.")
+        
+        # Only show the refresh block if there were processes to begin with
+        st.subheader("Summary Refresh")
+        st.info("🔄 Refreshing summary to reflect posted records...")
+        
+        refreshed = requests.get(COUNT_API).json()
+        st.json(refreshed)
+        
 
     else:
         st.info("No processes found.")
 
 except requests.exceptions.RequestException as e:
-    st.error(f"API Error: {str(e)}")
+    st.error(f"❌ API Error: Failed to connect to or retrieve summary from the API: {str(e)}")
 except Exception as e:
-    st.error(f"Unexpected Error: {str(e)}")
+    st.error(f"❌ Unexpected Error in Dashboard: {str(e)}")
 
 
-
-
-
-
-
-
-
-
-
-
-# =============================== OLD CODE =========================================
 # import streamlit as st
 # import requests
 # import subprocess
 # import time
-# import random
-# import pandas as pd
+# import json
 
-# # ----------------- CONFIG -----------------
-# COUNT_API = "http://0.0.0.0:8000/processes"
-# st.set_page_config(page_title="ERP Forms Automation", layout="wide")
+# # ========================
+# # 🔹 API Endpoints
+# # ========================
+# BASE_URL = "http://api.rabtai.3em.tech/api/Feed"
+# COUNT_API = f"{BASE_URL}/SummarizeRecords"
+# TEMPLATE_API = f"{BASE_URL}/getByTemplateId/{{templateId}}"
+# POST_API = f"{BASE_URL}/Posted/{{recordId}}"
 
-# # ----------------- CUSTOM CSS -----------------
-# st.markdown("""
-#     <style>
-#         .stApp {
-#             background: linear-gradient(135deg, #1e1e2f, #2d2d44);
-#             font-family: 'Segoe UI', Tahoma, sans-serif;
-#             color: #e0e0e0;
-#         }
-#         h1, h2, h3, h4 {
-#             color: #f5f6fa;
-#         }
-#         /* Sidebar */
-#         section[data-testid="stSidebar"] {
-#             background-color: #222233;
-#         }
-#         section[data-testid="stSidebar"] h2 {
-#             color: #00c6ff;
-#         }
-#         /* Hover effects */
-#         .stMetric:hover, .stTable:hover, .streamlit-expanderHeader:hover {
-#             transform: scale(1.02);
-#             transition: all 0.3s ease-in-out;
-#             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-#         }
-#         /* Expander styling */
-#         .streamlit-expanderHeader {
-#             background-color: #33334f !important;
-#             color: #f5f6fa !important;
-#             border-radius: 5px;
-#         }
-#     </style>
-# """, unsafe_allow_html=True)
+# # ==============================
+# # 🔹 Template → RPA file mapping
+# # ==============================
+# TEMPLATE_RPA_MAP = {
+#     "Purchase Bill Form": "purchase_bill_flow.robot",
+#     "Purchase Order Form": "purchase_order_flow.robot",
+# }
 
-# # ----------------- SIDEBAR -----------------
-# st.sidebar.title("ERP FORMS AUTOMATION")
-# menu = st.sidebar.radio("Navigation", ["📊 Dashboard", "📝 Logs"])
-
-# # ----------------- GLOBAL LOGS LIST -----------------
-# if "logs" not in st.session_state:
-#     st.session_state["logs"] = []
-
-# def add_log(message):
-#     st.session_state["logs"].append(message)
-
-# # ----------------- RPA FUNCTION -----------------
-# def run_rpa(document_type):
-#     """
-#     Trigger your Robot Framework RPA script based on the process name.
-#     """
-#     if document_type.lower() == "grn":
-#         robot_file = "grn_flow.robot"
-#     elif document_type.lower() == "purchaseorder":
-#         robot_file = "purchase_order_flow.robot"
-#     elif document_type.lower() == "purchasebill":
-#         robot_file = "purchase_bill_flow.robot"
-#     else:
-
-#         # st.warning(f"No RPA configured for {document_type}")
-#         return None
-
-#     start_time = time.time()
-#     add_log(f"🚀 Starting RPA for {document_type}...")
-
+# # ========================
+# # 🔹 Run RPA
+# # ========================
+# def run_rpa(rpa_file: str):
 #     try:
-#         subprocess.run(["robot", robot_file], check=True)
-#         duration = round(time.time() - start_time, 2)
-#         msg = f"✅ {document_type} completed in {duration} seconds"
-#         st.success(msg)
-#         add_log(msg)
-#         return duration
-#     except subprocess.CalledProcessError as e:
-#         duration = round(time.time() - start_time, 2)
-#         msg = f"❌ {document_type} failed after {duration} seconds: {e}"
-#         st.error(msg)
-#         add_log(msg)
-#         return None
+#         start_time = time.time()
+#         # NOTE: Removed 'text=True' for subprocess.run. 
+#         # While it often works, for full compatibility with Robot's large output, 
+#         # it's better to manage text decoding explicitly if needed, but we'll try to keep it simple.
+#         # Keeping it as 'text=True' since that's what was in the original and it simplifies stderr handling.
+#         result = subprocess.run(
+#             ["robot", rpa_file],
+#             capture_output=True,
+#             text=True
+#         )
+#         end_time = time.time()
+#         duration = round(end_time - start_time, 2)
 
-# # ----------------- DASHBOARD -----------------
-# if menu == "📊 Dashboard":
-#     st.title("📊 RPA Process Dashboard")
+#         if result.returncode == 0:
+#             return f"✅ Success in {duration}s"
+#         else:
+#             # Include a snippet of stdout/stderr for debugging context
+#             error_details = result.stderr or result.stdout
+#             return f"❌ Failed: {error_details[:500]}..." # Show first 500 chars of error
 
-#     try:
-#         resp = requests.get(COUNT_API)
-#         resp.raise_for_status()
-#         processes = resp.json()
 #     except Exception as e:
-#         st.error(f"Failed to fetch data: {e}")
-#         processes = []
+#         return f"⚠️ Error: {str(e)}"
+
+# # [============================]
+# # [🔹 Auto Process & Post🔹    ]
+# # [=========================== ]
+# def process_and_post(template_id: str, template_name: str):
+#     try:
+#         # 1️⃣ Fetch all records under this template
+#         detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
+#         detail_resp.raise_for_status()
+#         detail_data = detail_resp.json().get("data", {})
+
+#         # Handle both single record and list of records
+#         if isinstance(detail_data, list):
+#             if not detail_data:
+#                 return f"⚠️ No unposted record found for {template_name}"
+#             detail_data = detail_data[0]  # Take the first record if list
+
+#         if not detail_data:
+#             return f"⚠️ No unposted record found for {template_name}"
+
+#         # Grab recordId and formData
+#         record_id = detail_data.get("id")
+#         form_data_str = detail_data.get("formData", "{}")
+        
+#         # NOTE: The robot script will parse this itself, but keeping this for local checks
+#         # form_data = json.loads(form_data_str) if form_data_str else {} 
+
+#         if not record_id:
+#             return f"⚠️ No valid recordId for {template_name}"
+
+#         st.info(f"🔍 Processing record {record_id} for {template_name}")
+
+#         # 2️⃣ Run mapped RPA file
+#         rpa_file = TEMPLATE_RPA_MAP.get(template_name)
+#         if rpa_file:
+#             rpa_result = run_rpa(rpa_file)
+#             st.success(rpa_result)
+            
+#             # If RPA failed, stop here and do not post.
+#             if "❌ Failed" in rpa_result:
+#                 return f"🛑 RPA failed for {template_name}. Posting skipped."
+#         else:
+#             return f"⚠️ No RPA file mapped for {template_name}"
+
+#         # 3️⃣ Post the record after RPA
+#         # CRITICAL FIX: Changed 'id' to 'record_id'
+#         post_resp = requests.put(POST_API.format(recordId=record_id))
+#         post_resp.raise_for_status()
+#         return f"📤 Record {record_id} posted successfully ✅"
+
+#     except requests.exceptions.RequestException as e:
+#         return f"❌ API Error in processing {template_name}: {e}"
+#     except json.JSONDecodeError as e:
+#         return f"❌ JSON Error in processing {template_name}: {e}"
+#     except Exception as e:
+#         return f"❌ Error in processing {template_name}: {e}"
+    
+
+
+# # ========================
+# # 🔹 Streamlit Dashboard
+# # ========================
+# st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
+# st.title("📊 ERP RPA Dashboard")
+
+# try:
+#     response = requests.get(COUNT_API)
+#     response.raise_for_status()
+#     api_response = response.json()
+
+#     processes = api_response.get("data", [])
 
 #     if processes:
 #         st.subheader("📌 Process Counts")
-#         st.table(processes)
+#         st.table([
+#             {"Process": p.get("templateName", "Unknown"), "Count": p.get("count", 0)}
+#             for p in processes
+#         ])
 
-#         # Metric cards
-#         cols = st.columns(len(processes))
-#         durations = {}  # store execution times
-
-#         for idx, process in enumerate(processes):
-#             document_type = process.get("document_type", "Unknown")
-#             count = int(process.get("count", 0))
-
-#             with cols[idx]:
-#                 st.metric(label=f"📄 {document_type}", value=count)
-
-#         # Detailed expanders + run automation
+#         # Loop and auto-handle processing + posting
 #         for process in processes:
-#             document_type = process.get("document_type", "Unknown")
+#             template_id = process.get("templateId")
+#             process_name = process.get("templateName", "Unknown")
 #             count = int(process.get("count", 0))
+
+#             st.metric(label=f"📄 {process_name}", value=count)
 
 #             if count > 0:
-#                 with st.expander(f"🔍 {document_type} details", expanded=False):
-#                     detail_resp = requests.get(f"http://0.0.0.0:8000/dummy_invoice")
-#                     detail_resp.raise_for_status()
-#                     data = detail_resp.json()
-#                     st.json(data)
+#                 msg = process_and_post(template_id, process_name)
+#                 st.write(msg)
 
-#                 st.info(f"⚡ Running automation for {document_type}...")
-#                 duration = run_rpa(document_type)
-#                 if duration:
-#                     durations[document_type] = duration
+#         # 🔄 Refresh summarize API after all done
+#         st.success("✅ All processes handled. Refreshing summary...")
+#         refreshed = requests.get(COUNT_API).json()
+#         st.json(refreshed)
 
-#         # Show graph of process durations
-#         if durations:
-#             st.subheader("⏱️ Process Execution Time")
-#             df = pd.DataFrame(list(durations.items()), columns=["Process", "Duration (s)"])
-#             st.bar_chart(df.set_index("Process"))
 #     else:
-#         st.warning("⚠️ No process data available.")
+#         st.info("No processes found.")
 
-# # ----------------- LOGS TAB -----------------
-# elif menu == "📝 Logs":
-#     st.title("📝 Automation Logs")
-#     if st.session_state["logs"]:
-#         for log in st.session_state["logs"][::-1]:
-#             st.write(log)
-#     else:
-#         st.info("No logs available yet.")
+# except requests.exceptions.RequestException as e:
+#     st.error(f"API Error: {str(e)}")
+# except Exception as e:
+#     st.error(f"Unexpected Error: {str(e)}")
