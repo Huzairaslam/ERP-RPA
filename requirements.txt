@@ -12,3 +12,4 @@ robotframework
 robotframework-seleniumlibrary
 robotframework-requests
 robotframework-pabot
+robotframework-jsonlibrary
