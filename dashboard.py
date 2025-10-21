@@ -3,183 +3,419 @@ import requests
 import subprocess
 import time
 import json
+import os
+import pandas as pd
+from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
+import logging
+import altair as alt
 
 # ========================
-# 🔹 API Endpoints
+# 🔹 CONFIG & CONSTANTS
 # ========================
 BASE_URL = "http://api.rabtai.3em.tech/api/Feed"
 COUNT_API = f"{BASE_URL}/SummarizeRecords"
 TEMPLATE_API = f"{BASE_URL}/getByTemplateId/{{templateId}}"
 POST_API = f"{BASE_URL}/Posted/{{recordId}}"
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "rpa_logs.csv")
 
-# ==============================
-# 🔹 Template → RPA file mapping
-# ==============================
+# ========================
+# 🔹 LOGGING SETUP (Daily Rotation)
+# ========================
+logger = logging.getLogger("RPA")
+logger.setLevel(logging.INFO)
+handler = TimedRotatingFileHandler(os.path.join(LOG_DIR, "rpa.log"), when="midnight", backupCount=7)
+formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+# ========================
+# 🔹 TEMPLATE → RPA FILE MAP
+# ========================
 TEMPLATE_RPA_MAP = {
     "Purchase Bill Form": "purchase_bill_flow.robot",
     "Purchase Order Form": "purchase_order_flow.robot",
 }
 
 # ========================
-# 🔹 Run RPA (Enhanced Output)
+# 🔹 SLACK NOTIFICATIONS
+# ========================
+SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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" 
+
+def send_slack_alert(title, message, status="info"):
+    """Send notification to Slack. Non-blocking (swallows exceptions)."""
+    emoji = "✅" if status == "success" else "❌" if status == "failed" else "⚠️"
+    payload = {"text": f"{emoji} *{title}*\n{message}"}
+    try:
+        requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=5)
+    except Exception as e:
+        logger.warning(f"Slack notification failed: {e}")
+
+# ========================
+# 🔹 UTILITY: TOAST (safe)
+# ========================
+def show_toast(message: str, success: bool = True):
+    """
+    Try to use st.toast if available (newer Streamlit versions).
+    Fallback to st.success / st.error for compatibility.
+    """
+    try:
+        # st.toast was introduced in recent Streamlit versions; use if available
+        if success:
+            st.toast(message)
+        else:
+            st.toast(message)
+    except Exception:
+        # fallback
+        if success:
+            st.success(message)
+        else:
+            st.error(message)
+
+# ========================
+# 🔹 LOG SAVER
+# ========================
+def save_log(template_name, status, message):
+    log_entry = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "template_name": template_name,
+        "status": status,
+        "message": message,
+    }
+
+    # Append to CSV
+    if os.path.exists(LOG_FILE):
+        try:
+            df = pd.read_csv(LOG_FILE)
+            df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
+        except Exception:
+            # if read fails (corrupt), recreate
+            df = pd.DataFrame([log_entry])
+    else:
+        df = pd.DataFrame([log_entry])
+    df.to_csv(LOG_FILE, index=False)
+
+    # Write to rotating text log
+    logger.info(f"{template_name} | {status} | {message}")
+
+# ========================
+# 🔹 RUN RPA
 # ========================
 def run_rpa(rpa_file: str):
-    """Runs the Robot Framework file and returns a structured result."""
     try:
         start_time = time.time()
-        result = subprocess.run(
-            ["robot", rpa_file],
-            capture_output=True,
-            text=True
-        )
-        end_time = time.time()
-        duration = round(end_time - start_time, 2)
+        result = subprocess.run(["robot", rpa_file], capture_output=True, text=True)
+        duration = round(time.time() - start_time, 2)
 
         if result.returncode == 0:
             return {
                 "status": "success",
-                "message": f"Execution completed in **{duration}s**.",
-                "details": f"Robot output log available in **output.xml** and **log.html**."
+                "message": f"Completed in {duration}s",
+                "details": "Log available in output.xml and log.html."
             }
         else:
             error_details = result.stderr or result.stdout
             return {
                 "status": "failed",
-                "message": f"Execution failed after **{duration}s**.",
-                "details": f"Error Log Snippet:\n```\n{error_details[:800]}...\n```" # Show more context
+                "message": f"Failed after {duration}s",
+                "details": f"```\n{error_details[:600]}...\n```"
             }
-
     except Exception as e:
-        return {
-            "status": "error",
-            "message": f"System Error during RPA launch: {str(e)}",
-            "details": ""
-        }
+        return {"status": "error", "message": f"System Error: {e}", "details": ""}
 
-# [============================]
-# [🔹 Auto Process & Post🔹    ]
-# [=========================== ]
-def process_and_post(template_id: str, template_name: str):
-    placeholder = st.empty() # Placeholder for processing status
+# ========================
+# 🔹 PROCESS AND POST
+# ========================
+def process_and_post(template_id: str, template_name: str, show_toasts: bool = True):
+    with st.spinner(f"Processing {template_name}..."):
+        placeholder = st.empty()
+        try:
+            # 1️⃣ Fetch Record
+            detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
+            detail_resp.raise_for_status()
+            detail_data = detail_resp.json().get("data", {})
 
-    try:
-        # 1️⃣ Fetch all records under this template
-        placeholder.info(f"🔍 Fetching record details for **{template_name}**...")
-        
-        detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
-        detail_resp.raise_for_status()
-        detail_data = detail_resp.json().get("data", {})
+            if isinstance(detail_data, list):
+                if not detail_data:
+                    placeholder.warning(f"No unposted records for **{template_name}**.")
+                    return False
+                detail_data = detail_data[0]
 
-        # Handle both single record and list of records
-        if isinstance(detail_data, list):
-            if not detail_data:
-                return placeholder.warning(f"⚠️ No unposted record found for **{template_name}**")
-            detail_data = detail_data[0]
+            record_id = detail_data.get("id")
+            if not record_id:
+                placeholder.error(f"No valid record ID for **{template_name}**.")
+                return False
 
-        if not detail_data:
-            return placeholder.warning(f"⚠️ No unposted record found for **{template_name}**")
+            # 2️⃣ Run RPA
+            rpa_file = TEMPLATE_RPA_MAP.get(template_name)
+            if not rpa_file:
+                placeholder.warning(f"No RPA script mapped for **{template_name}**.")
+                return False
 
-        # Grab recordId
-        record_id = detail_data.get("id")
-        
-        if not record_id:
-            return placeholder.error(f"⚠️ No valid recordId for **{template_name}**")
-
-        placeholder.info(f"🤖 Starting RPA for Record **{record_id}**...")
-
-        # 2️⃣ Run mapped RPA file
-        rpa_file = TEMPLATE_RPA_MAP.get(template_name)
-        if rpa_file:
             rpa_result = run_rpa(rpa_file)
-            
-            if rpa_result['status'] == 'success':
-                st.success(f"✅ RPA Success for **{template_name}** ({record_id}). {rpa_result['message']}")
+            if rpa_result["status"] == "success":
+                st.success(f"✅ RPA Success: {rpa_result['message']}")
+                save_log(template_name, "Success", rpa_result['message'])
+                send_slack_alert(f"RPA Success: {template_name}", rpa_result['message'], "success")
+                if show_toasts:
+                    show_toast(f"{template_name} completed successfully ✅", success=True)
             else:
-                st.error(f"❌ RPA Failed for **{template_name}** ({record_id}). {rpa_result['message']}")
-                with st.expander("Show detailed error log"):
-                    st.markdown(rpa_result['details'])
-                return f"🛑 RPA failed for **{template_name}**. Posting skipped."
-        else:
-            return placeholder.warning(f"⚠️ No RPA file mapped for **{template_name}**")
+                st.error(f"❌ RPA Failed: {rpa_result['message']}")
+                with st.expander("View Error Details"):
+                    st.markdown(rpa_result["details"])
+                save_log(template_name, "Failed", rpa_result['message'])
+                send_slack_alert(f"RPA Failed: {template_name}", rpa_result['message'], "failed")
+                if show_toasts:
+                    show_toast(f"{template_name} failed ❌", success=False)
+                return False
 
-        # 3️⃣ Post the record after RPA
-        placeholder.info(f"📤 Posting Record **{record_id}**...")
-        post_resp = requests.put(POST_API.format(recordId=record_id))
-        post_resp.raise_for_status()
-        
-        # Final success message replaces the placeholder content
-        placeholder.success(f"✅ Record **{record_id}** posted successfully!")
-        return True # Return True to signal successful processing
+            # 3️⃣ Post After Success
+            post_resp = requests.put(POST_API.format(recordId=record_id))
+            post_resp.raise_for_status()
+            st.info(f"📤 Record {record_id} posted successfully!")
+            save_log(template_name, "Posted", f"Record ID: {record_id}")
+            return True
 
-    except requests.exceptions.RequestException as e:
-        placeholder.error(f"❌ API Error in processing **{template_name}**: {e}")
-        return False
-    except json.JSONDecodeError as e:
-        placeholder.error(f"❌ JSON Error in processing **{template_name}**: {e}")
-        return False
-    except Exception as e:
-        placeholder.error(f"❌ Unhandled Error in processing **{template_name}**: {e}")
-        return False
-
+        except requests.exceptions.RequestException as e:
+            placeholder.error(f"🌐 API Error: {e}")
+            save_log(template_name, "Error", f"API Error: {e}")
+            if show_toasts:
+                show_toast(f"{template_name} API Error", success=False)
+            return False
+        except Exception as e:
+            placeholder.error(f"⚠️ Unexpected Error: {e}")
+            save_log(template_name, "Error", f"Unexpected: {e}")
+            if show_toasts:
+                show_toast(f"{template_name} unexpected error", success=False)
+            return False
 
 # ========================
-# 🔹 Streamlit Dashboard
+# 🔹 CACHED API FETCH
 # ========================
-st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
-st.title("📊 ERP RPA Dashboard")
-
-try:
+@st.cache_data(ttl=60)
+def get_process_data():
     response = requests.get(COUNT_API)
     response.raise_for_status()
-    api_response = response.json()
+    return response.json()
 
-    processes = api_response.get("data", [])
+# ========================
+# 🔹 STREAMLIT PAGE CONFIG
+# ========================
+st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
 
-    if processes:
-        st.subheader("📌 Process Counts")
-        # Use st.dataframe for a nicer look than st.table
-        st.dataframe([
-            {"Process": p.get("templateName", "Unknown"), "Unposted Count": p.get("count", 0)}
-            for p in processes
-        ], hide_index=True)
-        
-        st.subheader("⚙️ Automatic Processing")
+# ========================
+# 🔹 SIDEBAR NAVIGATION
+# ========================
+st.sidebar.title("ERP RPA")
+nav = st.sidebar.radio("Navigation", ("Dashboard", "Analytics", "Logs", "Settings"))
 
-        all_successful = True
-        
-        # Loop and auto-handle processing + posting
-        for process in processes:
-            template_id = process.get("templateId")
-            process_name = process.get("templateName", "Unknown")
-            count = int(process.get("count", 0))
+# Settings controls
+st.sidebar.markdown("---")
+show_toasts = st.sidebar.checkbox("Enable toast notifications", value=True)
+st.sidebar.caption("Use this toggle to enable/disable toast popups.")
 
-            # Display the count for the process currently being handled
-            st.metric(label=f"📄 {process_name}", value=count)
+# ========================
+# 🔹 PAGE HEADER (common)
+# ========================
+st.title("🤖 ERP RPA Automation Dashboard")
+st.caption("Streamlined data entry automation powered by AI + RPA integration")
 
-            if count > 0:
-                result = process_and_post(template_id, process_name)
-                if not result:
-                    all_successful = False
-
-        # 🔄 Refresh summarize API after all done (Correctly implemented)
-        st.divider()
-        st.success("✅ All active processes have been checked.")
-        
-        # Only show the refresh block if there were processes to begin with
-        st.subheader("Summary Refresh")
-        st.info("🔄 Refreshing summary to reflect posted records...")
-        
-        refreshed = requests.get(COUNT_API).json()
-        st.json(refreshed)
-        
-
+# ========================
+# 🔹 Helper: load logs DataFrame
+# ========================
+def load_logs_df():
+    if os.path.exists(LOG_FILE):
+        try:
+            df = pd.read_csv(LOG_FILE)
+            # ensure timestamp parsed
+            if "timestamp" in df.columns:
+                try:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                except Exception:
+                    # attempt parsing with format
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+            return df
+        except Exception:
+            return pd.DataFrame(columns=["timestamp", "template_name", "status", "message"])
     else:
-        st.info("No processes found.")
+        return pd.DataFrame(columns=["timestamp", "template_name", "status", "message"])
 
-except requests.exceptions.RequestException as e:
-    st.error(f"❌ API Error: Failed to connect to or retrieve summary from the API: {str(e)}")
-except Exception as e:
-    st.error(f"❌ Unexpected Error in Dashboard: {str(e)}")
+# ========================
+# 🔹 DASHBOARD VIEW
+# ========================
+if nav == "Dashboard":
+    try:
+        api_response = get_process_data()
+        processes = api_response.get("data", [])
+
+        if processes:
+            st.subheader("📊 Current Process Overview")
+            cols = st.columns(len(processes) if len(processes)>0 else 1)
+            for i, process in enumerate(processes):
+                with cols[i]:
+                    st.metric(label=process.get('templateName', 'Unknown'),
+                              value=process.get('count', 0))
+
+            st.divider()
+
+            st.subheader("⚙️ Automated Execution")
+            progress = None
+            total = len(processes)
+            if total > 1:
+                progress = st.progress(0)
+            for idx, process in enumerate(processes):
+                with st.expander(f"🔹 {process.get('templateName')}"):
+                    st.write(f"Unposted Records: **{process.get('count', 0)}**")
+                    if process.get("count", 0) > 0:
+                        result = process_and_post(process.get("templateId"), process.get("templateName"), show_toasts=show_toasts)
+                        if not result:
+                            st.error("Processing failed for this template.")
+                    else:
+                        st.info("No pending records found.")
+                if progress:
+                    progress.progress(int((idx + 1) / total * 100))
+
+            st.success("✅ All available processes have been checked.")
+        else:
+            st.info("No processes found at the moment.")
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ API Error: {e}")
+    except Exception as e:
+        st.error(f"⚠️ Unexpected Error: {e}")
+
+    # Manual trigger (kept in dashboard)
+    st.divider()
+    st.subheader("🧠 Manual RPA Trigger")
+    manual_form = st.selectbox("Select Form", list(TEMPLATE_RPA_MAP.keys()))
+    if st.button("🚀 Run Selected RPA"):
+        save_log(manual_form, "Manual Trigger", "User manually started RPA process")
+        process_and_post("manual", manual_form, show_toasts=show_toasts)
+
+# ========================
+# 🔹 ANALYTICS VIEW (Altair charts)
+# ========================
+elif nav == "Analytics":
+    st.subheader("📈 Analytics")
+    df_logs = load_logs_df()
+    if df_logs.empty:
+        st.info("No logs yet — run some RPA processes to populate analytics.")
+    else:
+        # Prepare basic aggregated charts
+        # 1) Status counts by template (stacked bar)
+        df_group = df_logs.groupby(["template_name", "status"]).size().reset_index(name="count")
+
+        base = alt.Chart(df_group).mark_bar().encode(
+            x=alt.X("template_name:N", sort='-y', title="Template"),
+            y=alt.Y("count:Q", title="Count"),
+            color=alt.Color("status:N", title="Status"),
+            tooltip=["template_name", "status", "count"]
+        ).properties(height=360, title="Run Counts by Template & Status")
+
+        st.altair_chart(base, use_container_width=True)
+
+        # 2) Daily runs trend
+        df_logs["date"] = df_logs["timestamp"].dt.date
+        daily = df_logs.groupby(["date", "status"]).size().reset_index(name="count")
+        if not daily.empty:
+            line = alt.Chart(daily).mark_line(point=True).encode(
+                x=alt.X("date:T", title="Date"),
+                y=alt.Y("count:Q", title="Runs"),
+                color=alt.Color("status:N"),
+                tooltip=["date", "status", "count"]
+            ).properties(height=300, title="Daily RPA Runs (by status)")
+            st.altair_chart(line, use_container_width=True)
+
+        # 3) Top templates by runs
+        top = df_logs.groupby("template_name").size().reset_index(name="runs").sort_values("runs", ascending=False).head(10)
+        bar = alt.Chart(top).mark_bar().encode(
+            x=alt.X("runs:Q", title="Runs"),
+            y=alt.Y("template_name:N", sort='-x', title="Template"),
+            tooltip=["template_name", "runs"]
+        ).properties(height=300, title="Top Templates by Runs")
+        st.altair_chart(bar, use_container_width=True)
+
+# ========================
+# 🔹 LOGS VIEW
+# ========================
+elif nav == "Logs":
+    st.subheader("📜 Activity Logs")
+    df_logs = load_logs_df()
+    if df_logs.empty:
+        st.info("No logs found yet.")
+    else:
+        # show summary metrics
+        c1, c2, c3 = st.columns(3)
+        c1.metric("✅ Success", int((df_logs["status"] == "Success").sum()))
+        c2.metric("❌ Failed", int((df_logs["status"] == "Failed").sum()))
+        c3.metric("📤 Posted", int((df_logs["status"] == "Posted").sum()))
+
+        # Filters
+        with st.expander("🔍 Filter Logs"):
+            # date range filter
+            min_date = df_logs["timestamp"].min().date()
+            max_date = df_logs["timestamp"].max().date()
+            date_range = st.date_input("Date range", [min_date, max_date])
+            form_types = st.multiselect("Form Type", df_logs["template_name"].unique(), default=list(df_logs["template_name"].unique()))
+            statuses = st.multiselect("Status", df_logs["status"].unique(), default=list(df_logs["status"].unique()))
+
+        filtered = df_logs.copy()
+        # apply date range safely
+        try:
+            start_dt = pd.to_datetime(date_range[0])
+            end_dt = pd.to_datetime(date_range[1]) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
+            filtered = filtered[(filtered["timestamp"] >= start_dt) & (filtered["timestamp"] <= end_dt)]
+        except Exception:
+            pass
+
+        if form_types:
+            filtered = filtered[filtered["template_name"].isin(form_types)]
+        if statuses:
+            filtered = filtered[filtered["status"].isin(statuses)]
+
+        st.dataframe(filtered.sort_values("timestamp", ascending=False), use_container_width=True)
+
+        # Download filtered logs
+        csv = filtered.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download Filtered Logs (CSV)", data=csv, file_name="rpa_logs_filtered.csv", mime="text/csv")
+
+# ========================
+# 🔹 SETTINGS VIEW
+# ========================
+elif nav == "Settings":
+    st.subheader("⚙️ Settings")
+    st.markdown("**Slack Integration**")
+    st.write("Webhook URL is currently stored in the script. In future you can move this to a `.env` or secure vault.")
+    st.write(f"Webhook (masked): `{SLACK_WEBHOOK_URL[:30]}...`")
+    st.write("Test Slack notification:")
+
+    if st.button("📣 Send test Slack notification"):
+        try:
+            send_slack_alert("Test Notification", "This is a test message from the ERP RPA Dashboard.", status="info")
+            st.success("Test message sent. Check your Slack channel.")
+        except Exception as e:
+            st.error(f"Failed to send test: {e}")
+
+    st.markdown("---")
+    st.write("Toast Notifications")
+    st.write("Toggle this in the sidebar (Enable toast notifications).")
+
+    st.markdown("---")
+    st.write("Developer tools")
+    if st.button("🧹 Clear local CSV logs (dangerous)"):
+        if os.path.exists(LOG_FILE):
+            os.remove(LOG_FILE)
+            st.success("Local CSV logs deleted. (You can't undo this.)")
+        else:
+            st.info("No CSV log file to delete.")
+
+    st.caption("Note: Consider moving secrets (webhook URL) to environment variables for production.")
+
+
+
+
 
 
 # import streamlit as st
@@ -187,150 +423,264 @@ except Exception as e:
 # import subprocess
 # import time
 # import json
+# import os
+# import pandas as pd
+# from datetime import datetime
+# from logging.handlers import TimedRotatingFileHandler
+# import logging
 
 # # ========================
-# # 🔹 API Endpoints
+# # 🔹 CONFIG & CONSTANTS
 # # ========================
 # BASE_URL = "http://api.rabtai.3em.tech/api/Feed"
 # COUNT_API = f"{BASE_URL}/SummarizeRecords"
 # TEMPLATE_API = f"{BASE_URL}/getByTemplateId/{{templateId}}"
 # POST_API = f"{BASE_URL}/Posted/{{recordId}}"
+# LOG_DIR = "logs"
+# os.makedirs(LOG_DIR, exist_ok=True)
+# LOG_FILE = os.path.join(LOG_DIR, "rpa_logs.csv")
 
-# # ==============================
-# # 🔹 Template → RPA file mapping
-# # ==============================
+# # ========================
+# # 🔹 LOGGING SETUP (Daily Rotation)
+# # ========================
+# logger = logging.getLogger("RPA")
+# logger.setLevel(logging.INFO)
+# handler = TimedRotatingFileHandler(os.path.join(LOG_DIR, "rpa.log"), when="midnight", backupCount=7)
+# formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+
+# # ========================
+# # 🔹 TEMPLATE → RPA FILE MAP
+# # ========================
 # TEMPLATE_RPA_MAP = {
 #     "Purchase Bill Form": "purchase_bill_flow.robot",
 #     "Purchase Order Form": "purchase_order_flow.robot",
 # }
 
 # # ========================
-# # 🔹 Run RPA
+# # 🔹 SLACK NOTIFICATIONS
+# # ========================
+# SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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" 
+
+# def send_slack_alert(title, message, status="info"):
+#     """Send notification to Slack."""
+#     emoji = "✅" if status == "success" else "❌" if status == "failed" else "⚠️"
+#     payload = {"text": f"{emoji} *{title}*\n{message}"}
+#     try:
+#         requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=5)
+#     except Exception as e:
+#         logger.warning(f"Slack notification failed: {e}")
+
+# # ========================
+# # 🔹 LOG SAVER
+# # ========================
+# def save_log(template_name, status, message):
+#     log_entry = {
+#         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+#         "template_name": template_name,
+#         "status": status,
+#         "message": message,
+#     }
+
+#     # Append to CSV
+#     if os.path.exists(LOG_FILE):
+#         df = pd.read_csv(LOG_FILE)
+#         df = pd.concat([df, pd.DataFrame([log_entry])], ignore_index=True)
+#     else:
+#         df = pd.DataFrame([log_entry])
+#     df.to_csv(LOG_FILE, index=False)
+
+#     # Write to rotating text log
+#     logger.info(f"{template_name} | {status} | {message}")
+
+# # ========================
+# # 🔹 RUN RPA
 # # ========================
 # def run_rpa(rpa_file: str):
 #     try:
 #         start_time = time.time()
-#         # NOTE: Removed 'text=True' for subprocess.run. 
-#         # While it often works, for full compatibility with Robot's large output, 
-#         # it's better to manage text decoding explicitly if needed, but we'll try to keep it simple.
-#         # Keeping it as 'text=True' since that's what was in the original and it simplifies stderr handling.
-#         result = subprocess.run(
-#             ["robot", rpa_file],
-#             capture_output=True,
-#             text=True
-#         )
-#         end_time = time.time()
-#         duration = round(end_time - start_time, 2)
+#         result = subprocess.run(["robot", rpa_file], capture_output=True, text=True)
+#         duration = round(time.time() - start_time, 2)
 
 #         if result.returncode == 0:
-#             return f"✅ Success in {duration}s"
+#             return {
+#                 "status": "success",
+#                 "message": f"Completed in {duration}s",
+#                 "details": "Log available in output.xml and log.html."
+#             }
 #         else:
-#             # Include a snippet of stdout/stderr for debugging context
 #             error_details = result.stderr or result.stdout
-#             return f"❌ Failed: {error_details[:500]}..." # Show first 500 chars of error
-
+#             return {
+#                 "status": "failed",
+#                 "message": f"Failed after {duration}s",
+#                 "details": f"```\n{error_details[:600]}...\n```"
+#             }
 #     except Exception as e:
-#         return f"⚠️ Error: {str(e)}"
+#         return {"status": "error", "message": f"System Error: {e}", "details": ""}
 
-# # [============================]
-# # [🔹 Auto Process & Post🔹    ]
-# # [=========================== ]
+# # ========================
+# # 🔹 PROCESS AND POSTs
+# # ========================
 # def process_and_post(template_id: str, template_name: str):
-#     try:
-#         # 1️⃣ Fetch all records under this template
-#         detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
-#         detail_resp.raise_for_status()
-#         detail_data = detail_resp.json().get("data", {})
+#     with st.spinner(f"Processing {template_name}..."):
+#         placeholder = st.empty()
 
-#         # Handle both single record and list of records
-#         if isinstance(detail_data, list):
-#             if not detail_data:
-#                 return f"⚠️ No unposted record found for {template_name}"
-#             detail_data = detail_data[0]  # Take the first record if list
+#         try:
+#             # 1️⃣ Fetch Record
+#             detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
+#             detail_resp.raise_for_status()
+#             detail_data = detail_resp.json().get("data", {})
 
-#         if not detail_data:
-#             return f"⚠️ No unposted record found for {template_name}"
+#             if isinstance(detail_data, list):
+#                 if not detail_data:
+#                     placeholder.warning(f"No unposted records for **{template_name}**.")
+#                     return False
+#                 detail_data = detail_data[0]
 
-#         # Grab recordId and formData
-#         record_id = detail_data.get("id")
-#         form_data_str = detail_data.get("formData", "{}")
-        
-#         # NOTE: The robot script will parse this itself, but keeping this for local checks
-#         # form_data = json.loads(form_data_str) if form_data_str else {} 
+#             record_id = detail_data.get("id")
+#             if not record_id:
+#                 placeholder.error(f"No valid record ID for **{template_name}**.")
+#                 return False
 
-#         if not record_id:
-#             return f"⚠️ No valid recordId for {template_name}"
+#             # 2️⃣ Run RPA
+#             rpa_file = TEMPLATE_RPA_MAP.get(template_name)
+#             if not rpa_file:
+#                 placeholder.warning(f"No RPA script mapped for **{template_name}**.")
+#                 return False
 
-#         st.info(f"🔍 Processing record {record_id} for {template_name}")
-
-#         # 2️⃣ Run mapped RPA file
-#         rpa_file = TEMPLATE_RPA_MAP.get(template_name)
-#         if rpa_file:
 #             rpa_result = run_rpa(rpa_file)
-#             st.success(rpa_result)
-            
-#             # If RPA failed, stop here and do not post.
-#             if "❌ Failed" in rpa_result:
-#                 return f"🛑 RPA failed for {template_name}. Posting skipped."
-#         else:
-#             return f"⚠️ No RPA file mapped for {template_name}"
+#             if rpa_result["status"] == "success":
+#                 st.success(f"✅ RPA Success: {rpa_result['message']}")
+#                 save_log(template_name, "Success", rpa_result['message'])
+#                 send_slack_alert(f"RPA Success: {template_name}", rpa_result['message'], "success")
+#             else:
+#                 st.error(f"❌ RPA Failed: {rpa_result['message']}")
+#                 with st.expander("View Error Details"):
+#                     st.markdown(rpa_result["details"])
+#                 save_log(template_name, "Failed", rpa_result['message'])
+#                 send_slack_alert(f"RPA Failed: {template_name}", rpa_result['message'], "failed")
+#                 return False
 
-#         # 3️⃣ Post the record after RPA
-#         # CRITICAL FIX: Changed 'id' to 'record_id'
-#         post_resp = requests.put(POST_API.format(recordId=record_id))
-#         post_resp.raise_for_status()
-#         return f"📤 Record {record_id} posted successfully ✅"
+#             # 3️⃣ Post After Success
+#             post_resp = requests.put(POST_API.format(recordId=record_id))
+#             post_resp.raise_for_status()
+#             st.info(f"📤 Record {record_id} posted successfully!")
+#             save_log(template_name, "Posted", f"Record ID: {record_id}")
+#             return True
 
-#     except requests.exceptions.RequestException as e:
-#         return f"❌ API Error in processing {template_name}: {e}"
-#     except json.JSONDecodeError as e:
-#         return f"❌ JSON Error in processing {template_name}: {e}"
-#     except Exception as e:
-#         return f"❌ Error in processing {template_name}: {e}"
-    
-
+#         except requests.exceptions.RequestException as e:
+#             placeholder.error(f"🌐 API Error: {e}")
+#             save_log(template_name, "Error", f"API Error: {e}")
+#             return False
+#         except Exception as e:
+#             placeholder.error(f"⚠️ Unexpected Error: {e}")
+#             save_log(template_name, "Error", f"Unexpected: {e}")
+#             return False
 
 # # ========================
-# # 🔹 Streamlit Dashboard
+# # 🔹 CACHED API FETCH
 # # ========================
-# st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
-# st.title("📊 ERP RPA Dashboard")
-
-# try:
+# @st.cache_data(ttl=60)
+# def get_process_data():
 #     response = requests.get(COUNT_API)
 #     response.raise_for_status()
-#     api_response = response.json()
+#     return response.json()
 
+# # ========================
+# # 🔹 STREAMLIT PAGE CONFIG
+# # ========================
+# st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
+
+# # ========================
+# # 🔹 PAGE HEADER
+# # ========================
+# st.title("🤖 ERP RPA Automation Dashboard")
+# st.caption("Streamlined data entry automation powered by AI + RPA integration")
+
+# # ========================
+# # 🔹 MAIN DASHBOARD
+# # ========================
+# try:
+#     api_response = get_process_data()
 #     processes = api_response.get("data", [])
 
 #     if processes:
-#         st.subheader("📌 Process Counts")
-#         st.table([
-#             {"Process": p.get("templateName", "Unknown"), "Count": p.get("count", 0)}
-#             for p in processes
-#         ])
+#         st.subheader("📊 Current Process Overview")
+#         cols = st.columns(len(processes))
+#         for i, process in enumerate(processes):
+#             with cols[i]:
+#                 st.metric(label=process.get('templateName', 'Unknown'),
+#                           value=process.get('count', 0))
 
-#         # Loop and auto-handle processing + posting
+#         st.divider()
+
+#         st.subheader("⚙️ Automated Execution")
 #         for process in processes:
-#             template_id = process.get("templateId")
-#             process_name = process.get("templateName", "Unknown")
-#             count = int(process.get("count", 0))
+#             with st.expander(f"🔹 {process.get('templateName')}"):
+#                 st.write(f"Unposted Records: **{process.get('count', 0)}**")
+#                 if process.get("count", 0) > 0:
+#                     result = process_and_post(process.get("templateId"), process.get("templateName"))
+#                     if not result:
+#                         st.error("Processing failed for this template.")
+#                 else:
+#                     st.info("No pending records found.")
 
-#             st.metric(label=f"📄 {process_name}", value=count)
-
-#             if count > 0:
-#                 msg = process_and_post(template_id, process_name)
-#                 st.write(msg)
-
-#         # 🔄 Refresh summarize API after all done
-#         st.success("✅ All processes handled. Refreshing summary...")
-#         refreshed = requests.get(COUNT_API).json()
-#         st.json(refreshed)
+#         st.success("✅ All available processes have been checked.")
 
 #     else:
-#         st.info("No processes found.")
+#         st.info("No processes found at the moment.")
 
 # except requests.exceptions.RequestException as e:
-#     st.error(f"API Error: {str(e)}")
+#     st.error(f"❌ API Error: {e}")
 # except Exception as e:
-#     st.error(f"Unexpected Error: {str(e)}")
+#     st.error(f"⚠️ Unexpected Error: {e}")
+
+# # ========================
+# # 🔹 MANUAL RPA TRIGGER
+# # ========================
+# st.divider()
+# st.subheader("🧠 Manual RPA Trigger")
+
+# manual_form = st.selectbox("Select Form", list(TEMPLATE_RPA_MAP.keys()))
+# if st.button("🚀 Run Selected RPA"):
+#     save_log(manual_form, "Manual Trigger", "User manually started RPA process")
+#     process_and_post("manual", manual_form)
+
+# # ========================
+# # 🔹 ACTIVITY LOGS + ANALYTICS
+# # ========================
+# st.divider()
+# st.subheader("📜 Activity Logs & Analytics")
+
+# if os.path.exists(LOG_FILE):
+#     df_logs = pd.read_csv(LOG_FILE)
+#     if not df_logs.empty:
+#         # Analytics summary
+#         c1, c2, c3 = st.columns(3)
+#         c1.metric("✅ Success", (df_logs["status"] == "Success").sum())
+#         c2.metric("❌ Failed", (df_logs["status"] == "Failed").sum())
+#         c3.metric("📤 Posted", (df_logs["status"] == "Posted").sum())
+
+#         # Filters
+#         with st.expander("🔍 Filter Logs"):
+#             form_types = st.multiselect("Form Type", df_logs["template_name"].unique())
+#             statuses = st.multiselect("Status", df_logs["status"].unique())
+#             filtered = df_logs.copy()
+#             if form_types:
+#                 filtered = filtered[filtered["template_name"].isin(form_types)]
+#             if statuses:
+#                 filtered = filtered[filtered["status"].isin(statuses)]
+
+#             st.dataframe(filtered.sort_values("timestamp", ascending=False), use_container_width=True)
+#     else:
+#         st.info("No logs found yet.")
+# else:
+#     st.info("No logs have been created yet.")
+
+# # ========================
+# # 🔹 DOWNLOAD LOGS
+# # ========================
+# if os.path.exists(LOG_FILE):
+#     with open(LOG_FILE, "rb") as f:
+#         st.download_button("⬇️ Download Logs (CSV)", f, file_name="rpa_logs.csv")

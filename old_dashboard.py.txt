@@ -1,0 +1,266 @@
+import streamlit as st
+import requests
+import subprocess
+import time
+import json
+
+# ========================
+# 🔹 API Endpoints
+# ========================
+BASE_URL = "http://api.rabtai.3em.tech/api/Feed"
+COUNT_API = f"{BASE_URL}/SummarizeRecords"
+TEMPLATE_API = f"{BASE_URL}/getByTemplateId/{{templateId}}"
+POST_API = f"{BASE_URL}/Posted/{{recordId}}"
+
+# ==============================
+# 🔹 Template → RPA file mapping
+# ==============================
+TEMPLATE_RPA_MAP = {
+    "Purchase Bill Form": "purchase_bill_flow.robot",
+    "Purchase Order Form": "purchase_order_flow.robot",
+}
+
+# ========================
+# 🔹 Run RPA (Enhanced Output)
+# ========================
+def run_rpa(rpa_file: str):
+    try:
+        start_time = time.time()
+        result = subprocess.run(["robot", rpa_file], capture_output=True, text=True)
+        duration = round(time.time() - start_time, 2)
+
+        if result.returncode == 0:
+            return {
+                "status": "success",
+                "message": f"✅ Completed in **{duration}s**",
+                "details": f"Log available in `output.xml` and `log.html`."
+            }
+        else:
+            error_details = result.stderr or result.stdout
+            return {
+                "status": "failed",
+                "message": f"❌ Failed after **{duration}s**",
+                "details": f"```\n{error_details[:600]}...\n```"
+            }
+
+    except Exception as e:
+        return {"status": "error", "message": f"⚠️ System Error: {e}", "details": ""}
+
+# ===========================
+# 🔹 Process & Post Automation
+# ===========================
+def process_and_post(template_id: str, template_name: str):
+    with st.spinner(f"Processing {template_name}..."):
+        placeholder = st.empty()
+
+        try:
+            # 1️⃣ Fetch record
+            detail_resp = requests.get(TEMPLATE_API.format(templateId=template_id))
+            detail_resp.raise_for_status()
+            detail_data = detail_resp.json().get("data", {})
+
+            if isinstance(detail_data, list):
+                if not detail_data:
+                    placeholder.warning(f"No unposted records for **{template_name}**.")
+                    return False
+                detail_data = detail_data[0]
+
+            record_id = detail_data.get("id")
+            if not record_id:
+                placeholder.error(f"No valid record ID for **{template_name}**.")
+                return False
+
+            # 2️⃣ Run RPA
+            rpa_file = TEMPLATE_RPA_MAP.get(template_name)
+            if not rpa_file:
+                placeholder.warning(f"No RPA script mapped for **{template_name}**.")
+                return False
+
+            rpa_result = run_rpa(rpa_file)
+            if rpa_result["status"] == "success":
+                st.success(f"✅ RPA Success for {template_name}: {rpa_result['message']}")
+            else:
+                st.error(f"❌ RPA Failed for {template_name}: {rpa_result['message']}")
+                with st.expander("View Error Details"):
+                    st.markdown(rpa_result["details"])
+                return False
+
+            # 3️⃣ Post after success
+            post_resp = requests.put(POST_API.format(recordId=record_id))
+            post_resp.raise_for_status()
+            st.info(f"📤 Record **{record_id}** posted successfully!")
+            return True
+
+        except requests.exceptions.RequestException as e:
+            placeholder.error(f"🌐 API Error: {e}")
+            return False
+        except Exception as e:
+            placeholder.error(f"⚠️ Unexpected Error: {e}")
+            return False
+
+
+# ========================
+# 🔹 Streamlit UI Config
+# ========================
+st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
+
+# --- 🌈 Corporate-Grade Styling ---
+st.markdown("""
+<style>
+/* ======== Global Reset ======== */
+body {
+    background: linear-gradient(135deg, #f6f9fc 0%, #eef2f7 100%);
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+}
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+/* ======== Title Section ======== */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+h1 {
+    font-size: 2.4rem !important;
+    background: linear-gradient(90deg, #1e3a8a, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    animation: fadeInDown 0.8s ease;
+}
+caption, .stCaption {
+    font-size: 1rem !important;
+    color: #475569;
+}
+
+/* ======== Metric Cards ======== */
+.metric-card {
+    background: white;
+    border-radius: 14px;
+    text-align: center;
+    padding: 1.2rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.8s ease;
+}
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+}
+.metric-card h2 {
+    margin: 0;
+    font-size: 2.4rem;
+    color: #1d4ed8;
+}
+.metric-card p {
+    margin: 0;
+    font-size: 1rem;
+    color: #334155;
+}
+
+/* ======== Expander Styling ======== */
+.streamlit-expanderHeader {
+    font-weight: 600 !important;
+    color: #1e3a8a !important;
+}
+div[data-testid="stExpander"] {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px !important;
+    background-color: #f8fafc;
+    transition: 0.3s ease;
+}
+div[data-testid="stExpander"]:hover {
+    border-color: #3b82f6;
+}
+
+/* ======== Animations ======== */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ======== Info + Alerts ======== */
+.stAlert {
+    border-radius: 10px;
+    font-size: 0.95rem;
+    padding: 0.8rem 1rem;
+}
+
+/* ======== Divider ======== */
+hr {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border: none;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ======== Spinner ======== */
+.css-1y4p8pa {
+    color: #2563eb !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ========================
+# 🔹 Dashboard Layout
+# ========================
+st.title("🤖 ERP RPA Automation Dashboard")
+st.caption("Streamlined data entry automation powered by AI + RPA integration")
+
+try:
+    response = requests.get(COUNT_API)
+    response.raise_for_status()
+    api_response = response.json()
+    processes = api_response.get("data", [])
+
+    if processes:
+        st.subheader("📊 Current Process Overview")
+        cols = st.columns(len(processes))
+        for i, process in enumerate(processes):
+            with cols[i]:
+                st.markdown(
+                    f"""
+                    <div class="metric-card">
+                        <h2>{process.get('count', 0)}</h2>
+                        <p>{process.get('templateName', 'Unknown')}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        st.subheader("⚙️ Automated Execution")
+        for process in processes:
+            with st.container():
+                with st.expander(f"🔹 {process.get('templateName')}"):
+                    st.write(f"Unposted Records: **{process.get('count', 0)}**")
+                    if process.get("count", 0) > 0:
+                        result = process_and_post(
+                            process.get("templateId"), process.get("templateName")
+                        )
+                        if not result:
+                            st.error("Processing failed for this template.")
+                    else:
+                        st.info("No pending records found.")
+
+        st.divider()
+        st.success("✅ All available processes have been checked.")
+
+        st.subheader("🔄 Updated Summary")
+        refreshed = requests.get(COUNT_API).json()
+        st.json(refreshed)
+
+    else:
+        st.info("No processes found at the moment.")
+
+except requests.exceptions.RequestException as e:
+    st.error(f"❌ API Error: {e}")
+except Exception as e:
+    st.error(f"⚠️ Unexpected Error: {e}")
