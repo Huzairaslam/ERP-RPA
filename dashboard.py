@@ -1,4 +1,13 @@
 import streamlit as st
+
+# ✅ MUST be right after the import, before any Streamlit or UI code
+st.set_page_config(
+    page_title="ERP-RPA Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+import streamlit as st
 import requests
 import subprocess
 import time
@@ -9,9 +18,6 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 import logging
 import altair as alt
-
-st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide", initial_sidebar_state="expanded")
-
 
 # --- CUSTOM THEME (CSS Injection for Corporate Look) ---
 st.markdown(
