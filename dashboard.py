@@ -10,6 +10,9 @@ from logging.handlers import TimedRotatingFileHandler
 import logging
 import altair as alt
 
+st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide", initial_sidebar_state="expanded")
+
+
 # --- CUSTOM THEME (CSS Injection for Corporate Look) ---
 st.markdown(
     """
