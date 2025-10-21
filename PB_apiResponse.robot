@@ -85,9 +85,3 @@ Fetch Latest Record
     Set Global Variable    ${QUANTITY}  ${qty}
     Set Global Variable    ${RATE}      ${rate}
     Set Global Variable    ${AMOUNT}    ${amount}
-
-
-
-
-
-

@@ -63,7 +63,6 @@ Purchase Order Form
     # Wait Until Element Is Visible    ${Expirydate}    5s
     # Click Element    ${Expirydate}
 
-
     Wait Until Element Is Visible    ${SpecialInst}    5s
     Click Element    ${SpecialInst}
     Input Text    ${SpecialInst}    hello 123
@@ -96,4 +95,3 @@ Purchase Order Form
 
     Wait Until Element Is Visible    ${ADDBTN}
     Click Element    ${ADDBTN}
-

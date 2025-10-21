@@ -104,7 +104,6 @@ def process_and_post(template_id: str, template_name: str):
 # ========================
 st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide")
 
-# --- 🌈 Corporate-Grade Styling ---
 st.markdown("""
 <style>
 /* ======== Global Reset ======== */

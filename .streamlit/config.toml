@@ -1,0 +1,10 @@
+[theme]
+# Deep corporate blue for accents
+primaryColor="#005ab4ff" 
+# White background for a clean look
+backgroundColor="#ffffffff"
+# Light grey/blue for inputs and secondary areas (must match CSS secondary)
+secondaryBackgroundColor="#F0F2F6" 
+# Dark, professional text
+textColor="#6f6f6fff" 
+font="sans serif"

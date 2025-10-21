@@ -71,25 +71,25 @@ Purchase Bill Form
     Wait Until Element Is Visible    ${AddDetailPB}
     Click Element    ${AddDetailPB}
     Sleep    1s
-    # # SKU NAME 
-    # Wait Until Element Is Visible    ${SKUNAME}
-    # Click Element    ${SKUNAME}
-    # Type Slowly    ${SKUNAME}    ${SKU}    0.2s
-    # Wait Until Element Is Visible    ${SKUVALUEPB}    5s
-    # Click Element    ${SKUVALUEPB}
-    # # SKU QUANTITYs
-    # Wait Until Element Is Visible    ${SKUQUANTITY}
-    # Click Element    ${SKUQUANTITY}
-    # Input Text    ${SKUQUANTITY}    ${QUANTITY}
-    # # SKU RATE 
-    # Wait Until Element Is Visible    ${SKUPBRATE}
-    # Click Element    ${SKUPBRATE}
-    # Input Text    ${SKUPBRATE}    ${RATE}
-    # SKU TOTAL RATE 
-    # Scroll Element Into View    ${SKUPBAMT}
-    # Wait Until Element Is Visible    ${SKUPBAMT}
-    # Click Element    ${SKUPBAMT}
-    # Input Text    ${SKUPBAMT}    100000
+    # SKU NAME 
+    Wait Until Element Is Visible    ${SKUNAME}
+    Click Element    ${SKUNAME}
+    Type Slowly    ${SKUNAME}    ${SKU}    0.2s
+    Wait Until Element Is Visible    ${SKUVALUEPB}    5s
+    Click Element    ${SKUVALUEPB}
+    # SKU QUANTITYs
+    Wait Until Element Is Visible    ${SKUQUANTITY}
+    Click Element    ${SKUQUANTITY}
+    Input Text    ${SKUQUANTITY}    ${QUANTITY}
+    # SKU RATE 
+    Wait Until Element Is Visible    ${SKUPBRATE}
+    Click Element    ${SKUPBRATE}
+    Input Text    ${SKUPBRATE}    ${RATE}
+    SKU TOTAL RATE 
+    Scroll Element Into View    ${SKUPBAMT}
+    Wait Until Element Is Visible    ${SKUPBAMT}
+    Click Element    ${SKUPBAMT}
+    Input Text    ${SKUPBAMT}    100000
     # FORM ADD BUTTON 
     Scroll Element Into View    ${ADDBTN}
     Wait Until Element Is Visible    ${ADDBTN}
