@@ -225,7 +225,7 @@ def process_and_post(template_id: str, template_name: str, show_toasts: bool = T
                     show_toast(f"{template_name} completed successfully ✅", success=True)
             else:
                 placeholder.error(f"❌ RPA Failed: {rpa_result['message']}")
-                with st.expander("View Error Details"):
+                with st.popover("View Error Details"):
                     st.markdown(rpa_result["details"])
                 save_log(template_name, "Failed", rpa_result['message'])
                 send_slack_alert(f"RPA Failed: {template_name}", rpa_result['message'], "failed")
