@@ -264,11 +264,6 @@ def get_process_data():
     return response.json()
 
 # ========================
-# 🔹 STREAMLIT PAGE CONFIG (Moved up to near the top)
-# ========================
-st.set_page_config(page_title="ERP-RPA Dashboard", layout="wide", initial_sidebar_state="expanded")
-
-# ========================
 # 🔹 SIDEBAR NAVIGATION
 # ========================
 st.sidebar.title("ERP RPA 🤖")
