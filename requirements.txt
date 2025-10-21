@@ -1,0 +1,14 @@
+# Streamlit dashboard
+streamlit==1.40.0
+pandas
+requests
+altair
+
+# Logging utilities
+colorlog
+
+# Robot Framework core + Selenium support
+robotframework
+robotframework-seleniumlibrary
+robotframework-requests
+robotframework-pabot
